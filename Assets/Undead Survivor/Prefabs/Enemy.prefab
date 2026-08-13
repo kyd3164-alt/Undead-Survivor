@@ -295,6 +295,8 @@ MonoBehaviour:
   - {fileID: 22100000, guid: 8d1d920724ffb8a409ce0e458dc4b7a9, type: 2}
   - {fileID: 22100000, guid: 25f7a818644b68042bb0c0c2a28d1550, type: 2}
   target: {fileID: 0}
+  isLive: 0
+  expOrbPrefab: {fileID: 8940524111542233508, guid: cc22dce79f9436a4491fed26bb3e06cf, type: 3}
 --- !u!114 &4496325966451269525
 MonoBehaviour:
   m_ObjectHideFlags: 0

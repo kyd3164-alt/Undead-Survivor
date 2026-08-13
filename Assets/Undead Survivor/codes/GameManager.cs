@@ -115,10 +115,29 @@ public class GameManager : MonoBehaviour
 
         exp++;
 
+        if (player != null)
+        {
+            PlayerStats playerStats = player.GetComponent<PlayerStats>();
+            if (playerStats != null)
+            {
+                playerStats.currentExp = exp;
+            }
+        }
+
         if (exp == nextExp[Mathf.Min(level, nextExp.Length-1)])
         {
             level++;
             exp = 0;
+
+            if (player != null)
+            {
+                PlayerStats playerStats = player.GetComponent<PlayerStats>();
+                if (playerStats != null)
+                {
+                    playerStats.currentExp = 0;
+                }
+            }
+
             uiLevelUp.Show();
         }
     }

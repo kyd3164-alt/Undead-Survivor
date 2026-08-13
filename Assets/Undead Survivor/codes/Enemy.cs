@@ -12,6 +12,8 @@ public class Enemy : MonoBehaviour
 
     public bool isLive;
 
+    public GameObject expOrbPrefab;
+
     Rigidbody2D rigid;
     Collider2D coll;
     Animator anim;
@@ -103,7 +105,11 @@ public class Enemy : MonoBehaviour
 
             anim.SetBool("Dead", true);
             GameManager.instance.kill++;
-            GameManager.instance.GetExp();
+
+            if (expOrbPrefab != null)
+            {
+                Instantiate(expOrbPrefab, transform.position, Quaternion.identity);
+            }
 
             if (GameManager.instance.isLive)
                 AudioManager.instance.PlaySfx(AudioManager.Sfx.Dead);
