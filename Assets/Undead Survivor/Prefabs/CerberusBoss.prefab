@@ -283,16 +283,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   bossType: 0
   currentState: 0
-  maxHealth: 1000
+  maxHealth: 35000
   currentHealth: 0
-  speed: 2
-  damage: 10
+  speed: 10
+  damage: 20
   attackSpeed: 1
-  defense: 5
-  healthRegenPerSec: 1
+  defense: 30
+  healthRegenPerSec: 10
   meleeAttackRange: 3
   meleeAttackRadius: 2
-  rangedAttackCooldown: 5
+  rangedAttackCooldown: 2
   firePoints:
   - {fileID: 183429521411224182}
   - {fileID: 8416174129781035852}
@@ -303,12 +303,13 @@ MonoBehaviour:
   lavaPrefab: {fileID: 0}
   lavaDuration: 3
   lavaDamage: 5
-  lavaRadius: 2
+  lavaRadius: 5
   slowDebuffAmount: 0.5
   debuffDuration: 2
   bulletPrefab: {fileID: 0}
   awakenStatMultiplier: 1.5
   minionPrefab: {fileID: 0}
-  spawnPoints: []
+  spawnPoints:
+  - {fileID: 0}
   phase2AuraEffect: {fileID: 0}
   isPhase2OvertimeBuffActive: 0

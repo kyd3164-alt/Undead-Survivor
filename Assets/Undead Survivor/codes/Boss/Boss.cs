@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.UI; // UI 슬라이더를 사용하기 위해 추가
 
 public class Boss : MonoBehaviour
 {
@@ -7,19 +8,19 @@ public class Boss : MonoBehaviour
     public enum BossState { Appearance, Move, Attack_Melee, Attack_Ranged, Dead }
 
     [Header("========================================")]
-    [Header("             [보스 공통 설정]            ")]
+    [Header("            [보스 공통 설정]            ")]
     [Header("========================================")]
     public BossType bossType;
     public BossState currentState = BossState.Appearance;
 
     [Header("--- 공통 능력치 ---")]
-    public float maxHealth = 1000f;       // 최대 체력
-    public float currentHealth;           // 현재 체력
-    public float speed = 2f;              // 이동 속도
-    public float damage = 10f;            // 기본 데미지
-    public float attackSpeed = 1.0f;      // 공격 속도 가속도
-    public float defense = 5f;            // 방어력
-    public float healthRegenPerSec = 1f;  // 초당 체력 회복량
+    public float maxHealth = 1000f;             // 최대 체력
+    public float currentHealth;               // 현재 체력
+    public float speed = 2f;                  // 이동 속도
+    public float damage = 10f;                // 기본 데미지
+    public float attackSpeed = 1.0f;          // 공격 속도 가속도
+    public float defense = 5f;                // 방어력
+    public float healthRegenPerSec = 1f;      // 초당 체력 회복량
 
     [Header("--- 공통 사거리 & 쿨타임 ---")]
     public float meleeAttackRange = 3f;   // 근접 공격 인식 거리
@@ -27,59 +28,95 @@ public class Boss : MonoBehaviour
     public float rangedAttackCooldown = 5f; // 원거리/스킬 공격 쿨타임
     private float lastRangedAttackTime;
 
-
     [Header("========================================")]
     [Header("       [Boss 1 : 케르베로스 전용]        ")]
     [Header("========================================")]
-    [Header("--- 케르베로스 머리 위치 (3개) ---")]
     public Transform[] firePoints;
-
-    [Header("--- 케르베로스 원거리 스킬 프리팹 ---")]
-    public GameObject fireBallPrefab;     // 화염구 프리팹
-    public GameObject lightningPrefab;    // 번개 프리팹
-
-    [Header("--- 케르베로스 점프 & 용암 장판 설정 ---")]
-    public float jumpAttackRadius = 2.5f;   // 점프 착지 시 즉발 범위 공격
-    public GameObject lavaPrefab;           // 용암 장판 프리팹
-    public float lavaDuration = 3f;         // 용암 바닥 유지 시간 (초)
-    public float lavaDamage = 5f;           // 용암 바닥 초당 데미지 (DOT)
-    public float lavaRadius = 2f;           // 용암 바닥 타격 범위
-    public float slowDebuffAmount = 0.5f;   // 디버프: 이동속도 감소율 (0.5 = 50% 감속)
-    public float debuffDuration = 2f;       // 디버프 지속 시간 (초)
-
+    public GameObject fireBallPrefab;
+    public GameObject lightningPrefab;
+    public float jumpAttackRadius = 2.5f;
+    public GameObject lavaPrefab;
+    public float lavaDuration = 3f;
+    public float lavaDamage = 5f;
+    public float lavaRadius = 2f;
+    public float slowDebuffAmount = 0.5f;
+    public float debuffDuration = 2f;
 
     [Header("========================================")]
     [Header("       [Boss 2 & Boss 3 탄막 전용]       ")]
     [Header("========================================")]
-    public GameObject bulletPrefab;       // 기본 탄막 프리팹
-
+    public GameObject bulletPrefab;
 
     [Header("========================================")]
-    [Header("          [Boss 3 : 드래곤 각성 전용]     ")]
+    [Header("         [Boss 3 : 드래곤 각성 전용]      ")]
     [Header("========================================")]
-    [Range(1f, 3f)] public float awakenStatMultiplier = 1.5f; // 각성 시 능력치 증폭률
-    public GameObject minionPrefab;       // 드래곤 소환수 프리팹
-    public Transform[] spawnPoints;       // 소환수 생성 위치들
-    public GameObject phase2AuraEffect;   // 각성 오라 이펙트 오브젝트
+    [Range(1f, 3f)] public float awakenStatMultiplier = 1.5f;
+    public GameObject minionPrefab;
+    public Transform[] spawnPoints;
+    public GameObject phase2AuraEffect;
     [SerializeField] private bool isPhase2OvertimeBuffActive = false;
-
 
     private bool isAwakened = false;
     private SpriteRenderer spriteRenderer;
+    private Animator animator; // 애니메이터 컴포넌트 추가
     private Transform target;
 
     void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>(); // 애니메이터 가져오기
     }
 
     void Start()
     {
-        target = GameManager.instance.player.transform;
+        if (GameManager.instance != null && GameManager.instance.player != null)
+        {
+            target = GameManager.instance.player.transform;
+        }
+
         currentHealth = maxHealth;
+
+        // 💡 [자동 연동] 메인 캔버스 안의 "Boss Health Bar"를 코드로 자동 탐색 및 활성화
+        GameObject sliderObj = GameObject.Find("Boss Health Bar");
+        if (sliderObj != null)
+        {
+            sliderObj.SetActive(true); // 보스가 등장하면 체력바 켜기
+        }
+
+        UpdateHealthUI();
 
         StartCoroutine(AppearanceRoutine());
         StartCoroutine(HealthRegenRoutine());
+    }
+
+    void Update()
+    {
+        // 실시간 체력바 수치 동기화
+        UpdateHealthUI();
+    }
+
+    void UpdateHealthUI()
+    {
+        GameObject sliderObj = GameObject.Find("Boss Health Bar");
+        if (sliderObj != null)
+        {
+            Slider slider = sliderObj.GetComponent<Slider>();
+            if (slider != null)
+            {
+                slider.maxValue = maxHealth;
+                slider.value = currentHealth;
+            }
+        }
+    }
+
+    void OnDestroy()
+    {
+        // 💡 [자동 정리] 보스가 죽거나 사라질 때 메인 체력바 다시 끄기
+        GameObject sliderObj = GameObject.Find("Boss Health Bar");
+        if (sliderObj != null)
+        {
+            sliderObj.SetActive(false);
+        }
     }
 
     IEnumerator HealthRegenRoutine()
@@ -111,14 +148,12 @@ public class Boss : MonoBehaviour
         StartCoroutine(BossLoop());
     }
 
-    // 거리 기반 자동 AI 루프
     IEnumerator BossLoop()
     {
         while (currentState != BossState.Dead)
         {
             currentState = BossState.Move;
 
-            // 1. 공격 검사 주기
             float checkInterval = Random.Range(1.5f, 3f) / attackSpeed;
             float timer = 0f;
 
@@ -126,29 +161,28 @@ public class Boss : MonoBehaviour
             {
                 MoveTowardsPlayer();
 
-                // 이동 도중 플레이어가 근접 사거리에 들어오면 바로 근접 공격!
-                float distanceToPlayer = Vector2.Distance(transform.position, target.position);
-                if (distanceToPlayer <= meleeAttackRange)
+                if (target != null)
                 {
-                    yield return StartCoroutine(Pattern_MeleeSlash());
-                    break;
+                    float distanceToPlayer = Vector2.Distance(transform.position, target.position);
+                    if (distanceToPlayer <= meleeAttackRange)
+                    {
+                        yield return StartCoroutine(Pattern_MeleeSlash());
+                        break;
+                    }
                 }
 
                 timer += Time.deltaTime;
                 yield return null;
             }
 
-            // 2. 근접 사거리가 아니고 원거리 쿨타임이 차면 원거리/스킬 공격 수행
             if (currentState == BossState.Move && Time.time >= lastRangedAttackTime + (rangedAttackCooldown / attackSpeed))
             {
                 if (bossType == BossType.Boss1)
                 {
-                    // 케르베로스(Boss1) 스킬 패턴 (화염구/번개 or 점프 공격 무작위 선택)
                     yield return StartCoroutine(Pattern_CerberusSkills());
                 }
                 else
                 {
-                    // Boss2, Boss3는 기존 탄막 패턴 발동 (+ Boss3는 확률적으로 미니언 소환 추가)
                     if (bossType == BossType.Boss3 && Random.value < 0.4f && minionPrefab != null)
                     {
                         SpawnMinions();
@@ -169,28 +203,27 @@ public class Boss : MonoBehaviour
         spriteRenderer.flipX = dir.x < 0;
     }
 
-    // [패턴 1] 근접 공격
     IEnumerator Pattern_MeleeSlash()
     {
         currentState = BossState.Attack_Melee;
 
-        // 경고 연출 (주황색)
         spriteRenderer.color = new Color(1f, 0.5f, 0f);
         yield return new WaitForSeconds(0.5f / attackSpeed);
         spriteRenderer.color = Color.white;
 
-        // 실제 타격 판정
-        float distanceToPlayer = Vector2.Distance(transform.position, target.position);
-        if (distanceToPlayer <= meleeAttackRadius)
+        if (target != null)
         {
-            Debug.Log("플레이어 근접 타격 성공!");
+            float distanceToPlayer = Vector2.Distance(transform.position, target.position);
+            if (distanceToPlayer <= meleeAttackRadius)
+            {
+                Debug.Log("보스 근접 타격 성공!");
+            }
         }
 
         yield return new WaitForSeconds(0.5f / attackSpeed);
         currentState = BossState.Move;
     }
 
-    // [패턴 2] 케르베로스 전용 스킬 선택 (삼두 원거리 혹은 점프 찍기)
     IEnumerator Pattern_CerberusSkills()
     {
         currentState = BossState.Attack_Ranged;
@@ -209,7 +242,7 @@ public class Boss : MonoBehaviour
                 if (firePoints[i] == null) continue;
 
                 Vector2 spawnPos = firePoints[i].position;
-                Vector2 dirToPlayer = (target.position - (Vector3)spawnPos).normalized;
+                Vector2 dirToPlayer = target != null ? (target.position - (Vector3)spawnPos).normalized : Vector2.down;
 
                 GameObject fireBall = Instantiate(fireBallPrefab, spawnPos, Quaternion.identity);
                 Rigidbody2D rb = fireBall.GetComponent<Rigidbody2D>();
@@ -218,7 +251,6 @@ public class Boss : MonoBehaviour
                     rb.linearVelocity = dirToPlayer * 6f;
                 }
             }
-            Debug.Log("삼두 화염구 동시 발사!");
         }
         else if (patternType == 1 && lightningPrefab != null)
         {
@@ -230,12 +262,11 @@ public class Boss : MonoBehaviour
             {
                 if (firePoints[i] == null) continue;
 
-                Vector3 strikePos = target.position + (Vector3)Random.insideUnitCircle * 1.5f;
+                Vector3 strikePos = target != null ? target.position + (Vector3)Random.insideUnitCircle * 1.5f : transform.position;
                 Instantiate(lightningPrefab, strikePos, Quaternion.identity);
 
                 yield return new WaitForSeconds(0.15f);
             }
-            Debug.Log("삼두 연쇄 번개 강하!");
         }
         else
         {
@@ -246,12 +277,15 @@ public class Boss : MonoBehaviour
         currentState = BossState.Move;
     }
 
-    // [패턴 2-sub] 케르베로스 점프 내려찍기 및 용암 생성 구현
     IEnumerator Pattern_CerberusJumpAttack()
     {
-        spriteRenderer.color = Color.red;
+        if (target == null) yield break;
+
+        // 1. 점프 시작 애니메이션 트리거 실행 (DoJump)
+        if (animator != null) animator.SetTrigger("DoJump");
+
+        // 점프 준비 동작 시간 (올라가는 모션 감상)
         yield return new WaitForSeconds(0.4f / attackSpeed);
-        spriteRenderer.color = Color.white;
 
         Vector3 startPos = transform.position;
         Vector3 landingPos = target.position;
@@ -259,6 +293,7 @@ public class Boss : MonoBehaviour
         float timer = 0f;
         float jumpDuration = 0.5f / attackSpeed;
 
+        // 공중으로 이동하는 동안
         while (timer < jumpDuration)
         {
             timer += Time.deltaTime;
@@ -266,10 +301,12 @@ public class Boss : MonoBehaviour
             yield return null;
         }
 
+        // 2. 착지 모션 트리거 실행 (Land) 및 판정/장판 생성
+        if (animator != null) animator.SetTrigger("Land");
+
         float distanceToPlayer = Vector2.Distance(transform.position, target.position);
         if (distanceToPlayer <= jumpAttackRadius)
         {
-            Debug.Log("케르베로스 점프 찍기 타격 성공!");
             ApplyDebuff(target.gameObject);
         }
 
@@ -282,31 +319,32 @@ public class Boss : MonoBehaviour
         yield return new WaitForSeconds(0.4f / attackSpeed);
     }
 
-    // 용암 바닥 도트딜 및 유지 시간 루틴
     IEnumerator LavaRoutine(GameObject lava)
     {
         float elapsed = 0f;
-        while (elapsed < lavaDuration)
+        while (elapsed < lavaDuration && lava != null)
         {
-            float distToPlayer = Vector2.Distance(lava.transform.position, target.position);
-            if (distToPlayer <= lavaRadius)
+            if (target != null)
             {
-                Debug.Log($"용암 장판 도트 데미지 적용: {lavaDamage}");
+                float distToPlayer = Vector2.Distance(lava.transform.position, target.position);
+                if (distToPlayer <= lavaRadius)
+                {
+                    Debug.Log($"용암 장판 도트 데미지 적용: {lavaDamage}");
+                }
             }
 
             elapsed += 1f;
             yield return new WaitForSeconds(1f);
         }
 
-        Destroy(lava);
+        if (lava != null) Destroy(lava);
     }
 
     void ApplyDebuff(GameObject targetObj)
     {
-        Debug.Log($"이동속도 {slowDebuffAmount * 100}% 감소 디버프 {debuffDuration}초 동안 적용!");
+        Debug.Log($"이동속도 {slowDebuffAmount * 100}% 감소 디버프 적용!");
     }
 
-    // [패턴 3] 일반 보스 원거리 탄막 공격 (Boss2, Boss3 전용)
     IEnumerator Pattern_RangedShotgun()
     {
         currentState = BossState.Attack_Ranged;
@@ -340,7 +378,6 @@ public class Boss : MonoBehaviour
         currentState = BossState.Move;
     }
 
-    // [드래곤 전용] 미니언 소환 함수
     void SpawnMinions()
     {
         if (minionPrefab == null || spawnPoints == null) return;
@@ -352,9 +389,9 @@ public class Boss : MonoBehaviour
                 Instantiate(minionPrefab, point.position, Quaternion.identity);
             }
         }
-        Debug.Log("드래곤 부하 소환!");
     }
 
+    // 외부(무기 등)에서 데미지를 줄 때 호출하는 함수
     public void TakeDamage(float incomingDamage)
     {
         if (currentState == BossState.Appearance) return;
@@ -364,20 +401,20 @@ public class Boss : MonoBehaviour
 
         currentHealth -= finalDamage;
 
+        Debug.Log($"<color=orange>[보스 피격]</color> 받은 데미지: {finalDamage:F1} | 남은 체력: {currentHealth:F1} / {maxHealth}");
+
         if (currentHealth <= 0)
         {
+            currentHealth = 0;
             if (bossType == BossType.Boss3 && !isAwakened) StartCoroutine(AwakenRoutine());
             else Die();
         }
     }
 
-    // [Boss 3] 드래곤 각성 패턴
     IEnumerator AwakenRoutine()
     {
         isAwakened = true;
         currentState = BossState.Dead;
-
-        Debug.Log("3형 보스(드래곤) 각성!");
 
         float timer = 0f;
         Vector3 originalPos = transform.position;
@@ -401,7 +438,6 @@ public class Boss : MonoBehaviour
         meleeAttackRange *= 1.3f;
         meleeAttackRadius *= 1.3f;
 
-        // 드래곤 오라 이펙트 활성화
         if (bossType == BossType.Boss3 && phase2AuraEffect != null)
         {
             phase2AuraEffect.SetActive(true);
@@ -414,16 +450,13 @@ public class Boss : MonoBehaviour
         StartCoroutine(BossLoop());
     }
 
-    // [Boss 3] 각성 후 시간이 지날수록 강해지는 버프 루틴
     IEnumerator Phase2StatScaling()
     {
         while (currentState != BossState.Dead && isPhase2OvertimeBuffActive)
         {
             yield return new WaitForSeconds(5.0f);
-
-            damage *= 1.05f; // 5초마다 공격력 5% 추가 증가
-            speed *= 1.02f;  // 이동속도 2% 추가 증가
-            Debug.Log("[각성 오버타임 버프] 보스가 점점 더 강해집니다!");
+            damage *= 1.05f;
+            speed *= 1.02f;
         }
     }
 
@@ -431,14 +464,12 @@ public class Boss : MonoBehaviour
     {
         currentState = BossState.Dead;
 
-        // 사망 시 오라 이펙트 종료
         if (isPhase2OvertimeBuffActive)
         {
             isPhase2OvertimeBuffActive = false;
             if (phase2AuraEffect != null) phase2AuraEffect.SetActive(false);
         }
 
-        // 🔓 Boss1 처치 시 Item 6 (용기의 본능) 해금 및 선택창 출력
         if (bossType == BossType.Boss1)
         {
             LevelUp levelUpUI = FindFirstObjectByType<LevelUp>();
@@ -448,12 +479,36 @@ public class Boss : MonoBehaviour
                 levelUpUI.Show();
             }
         }
-        else if (bossType == BossType.Boss3)
-        {
-            Debug.Log("용왕(드래곤) 완전 처치!");
-        }
 
         Destroy(gameObject, 2.0f);
+    }
+
+    void OnCollisionStay2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Player") && currentState != BossState.Appearance)
+        {
+            // 1. PlayerHealth 컴포넌트를 직접 가져와서 실행 시도
+            PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeBossBodyDamage(damage);
+                Debug.Log($"<color=red>[성공]</color> PlayerHealth 발견! 데미지 {damage} 전달 완료");
+            }
+            else
+            {
+                // 2. 만약 컴포넌트가 없다면 플레이어 하위에 있거나 다른 곳에 있는지 찾아서 시도
+                PlayerHealth foundHealth = collision.gameObject.GetComponentInChildren<PlayerHealth>();
+                if (foundHealth != null)
+                {
+                    foundHealth.TakeBossBodyDamage(damage);
+                    Debug.Log($"<color=red>[성공]</color> 자식 오브젝트에서 PlayerHealth 발견 및 데미지 전달!");
+                }
+                else
+                {
+                    Debug.LogWarning("⚠️ 플레이어 오브젝트에 PlayerHealth 스크립트가 없습니다!");
+                }
+            }
+        }
     }
 
     void OnDrawGizmosSelected()

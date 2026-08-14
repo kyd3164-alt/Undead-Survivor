@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -6,10 +6,13 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
+
     [Header("# Game Control")]
     public bool isLive;
+    public bool isBossTime; // 🌟 [추가] 보스 등장 중일 때 게임 타이머를 멈추기 위한 플래그
     public float gameTime;
     public float maxGameTime = 2 * 10f;
+
     [Header("# Player Info")]
     public int playerId;
     public float health;
@@ -18,6 +21,7 @@ public class GameManager : MonoBehaviour
     public int kill;
     public int exp;
     public int[] nextExp = { 3, 5, 8, 12, 17, 23, 30, 38, 47, 57 };
+
     [Header("# Game Object")]
     public PoolManager pool;
     public Player player;
@@ -38,7 +42,7 @@ public class GameManager : MonoBehaviour
         health = maxHealth;
 
         player.gameObject.SetActive(true);
-        uiLevelUp.Select(playerId % 2);    // �ӽ� ��ũ��Ʈ (ù��° ĳ���� ����)
+        uiLevelUp.Select(playerId % 2);    // 임시 스크립트 (첫번째 캐릭터 선택)
         Resume();
 
         AudioManager.instance.PlayBGM(true);
@@ -96,7 +100,8 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (!isLive)
+        // 🌟 [수정] 게임이 끝났거나, 보스 타임(isBossTime)이면 게임 시간(gameTime)을 올리지 않음
+        if (!isLive || isBossTime)
             return;
 
         gameTime += Time.deltaTime;
@@ -124,7 +129,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (exp == nextExp[Mathf.Min(level, nextExp.Length-1)])
+        if (exp == nextExp[Mathf.Min(level, nextExp.Length - 1)])
         {
             level++;
             exp = 0;
