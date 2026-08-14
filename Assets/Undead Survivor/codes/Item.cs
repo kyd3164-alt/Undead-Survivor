@@ -38,6 +38,7 @@ public class Item : MonoBehaviour
                 break;
             case ItemData.ItemType.Glove:
             case ItemData.ItemType.Shoe:
+            case ItemData.ItemType.Health:
                 textDesc.text = string.Format(data.itemDesc, data.damages[level] * 100);
                 break;
             default:
@@ -73,6 +74,7 @@ public class Item : MonoBehaviour
                 break;
             case ItemData.ItemType.Glove:
             case ItemData.ItemType.Shoe:
+            case ItemData.ItemType.Health:
                 if (level == 0)
                 {
                     GameObject newGear = new GameObject();

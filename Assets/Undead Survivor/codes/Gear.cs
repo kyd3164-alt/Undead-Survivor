@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Gear : MonoBehaviour
 {
@@ -34,9 +34,12 @@ public class Gear : MonoBehaviour
             case ItemData.ItemType.Shoe:
                 SpeedUp();
                 break;
+            // ➕ [추가] Health 타입일 때 HpUp 실행!
+            case ItemData.ItemType.Health:
+                HpUp();
+                break;
         }
     }
-
 
     void RateUp()
     {
@@ -63,5 +66,19 @@ public class Gear : MonoBehaviour
     {
         float speed = 3 * Character.Speed;
         GameManager.instance.player.speed = speed + speed * rate;
+    }
+
+    // ➕ [추가] 체력을 늘려주는 함수
+    void HpUp()
+    {
+        // Player에 붙어있는 PlayerHealth 참조 가져오기
+        PlayerHealth playerHealth = GameManager.instance.player.GetComponent<PlayerHealth>();
+
+        if (playerHealth != null)
+        {
+            // rate에 적힌 값(예: 20f)만큼 최대 체력 증가!
+            // 고정 수치가 아니라 비율(%)로 늘리고 싶다면 rate * 100 등으로 응용 가능합니다.
+            playerHealth.IncreaseMaxHp(rate);
+        }
     }
 }
