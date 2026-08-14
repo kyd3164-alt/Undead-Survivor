@@ -5,7 +5,7 @@ using UnityEngine.UI; // UI 슬라이더를 사용하기 위해 추가
 public class Boss : MonoBehaviour
 {
     public enum BossType { Boss1, Boss2, Boss3 }
-    public enum BossState { Appearance, Move, Attack_Melee, Attack_Ranged, Dead }
+    public enum BossState { Appearance, Idle, Move, Attack_Melee, Attack_Ranged, Dead }
 
     [Header("========================================")]
     [Header("            [보스 공통 설정]            ")]
@@ -487,7 +487,6 @@ public class Boss : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player") && currentState != BossState.Appearance)
         {
-            // 1. PlayerHealth 컴포넌트를 직접 가져와서 실행 시도
             PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
             if (playerHealth != null)
             {
@@ -496,17 +495,7 @@ public class Boss : MonoBehaviour
             }
             else
             {
-                // 2. 만약 컴포넌트가 없다면 플레이어 하위에 있거나 다른 곳에 있는지 찾아서 시도
-                PlayerHealth foundHealth = collision.gameObject.GetComponentInChildren<PlayerHealth>();
-                if (foundHealth != null)
-                {
-                    foundHealth.TakeBossBodyDamage(damage);
-                    Debug.Log($"<color=red>[성공]</color> 자식 오브젝트에서 PlayerHealth 발견 및 데미지 전달!");
-                }
-                else
-                {
-                    Debug.LogWarning("⚠️ 플레이어 오브젝트에 PlayerHealth 스크립트가 없습니다!");
-                }
+                Debug.LogWarning("⚠️ 플레이어 오브젝트에 PlayerHealth 스크립트가 없습니다!");
             }
         }
     }

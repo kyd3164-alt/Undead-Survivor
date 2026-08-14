@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 8262190107368453981}
   - component: {fileID: 3271502734973322349}
   - component: {fileID: 7688283086137746526}
+  - component: {fileID: 3238413446998599993}
   m_Layer: 0
   m_Name: CerberusBoss
   m_TagString: Untagged
@@ -313,3 +314,25 @@ MonoBehaviour:
   - {fileID: 0}
   phase2AuraEffect: {fileID: 0}
   isPhase2OvertimeBuffActive: 0
+--- !u!95 &3238413446998599993
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7074805998275420168}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 325cae2fabcafd940a3a1165d638571a, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

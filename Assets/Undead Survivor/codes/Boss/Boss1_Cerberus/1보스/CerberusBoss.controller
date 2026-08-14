@@ -68,7 +68,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Boss_Move
+  m_Name: Boss_Idle
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
