@@ -1,4 +1,5 @@
-using System.Runtime.ExceptionServices;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -25,32 +26,36 @@ public class Player : MonoBehaviour
 
     void OnEnable()
     {
-        speed *= Character.Speed;
-        anim.runtimeAnimatorController = animCon[GameManager.instance.playerId];
+        // 🌟 GameManager가 안전하게 존재할 때만 실행되도록 방어 코드 추가
+        if (GameManager.instance != null)
+        {
+            speed *= Character.Speed;
+
+            if (animCon != null && animCon.Length > GameManager.instance.playerId)
+            {
+                anim.runtimeAnimatorController = animCon[GameManager.instance.playerId];
+            }
+        }
     }
 
     void Update()
     {
-        if (!GameManager.instance.isLive)
+        if (GameManager.instance == null || !GameManager.instance.isLive)
             return;
-
-        //inputVec.x = Input.GetAxisRaw("Horizontal");
-        //inputVec.y = Input.GetAxisRaw("Vertical");
     }
 
     void FixedUpdate()
     {
-        if (!GameManager.instance.isLive)
+        if (GameManager.instance == null || !GameManager.instance.isLive)
             return;
 
         Vector2 nextVec = inputVec * speed * Time.fixedDeltaTime;
         rigid.MovePosition(rigid.position + nextVec);
     }
 
-
     void LateUpdate()
     {
-        if (!GameManager.instance.isLive)
+        if (GameManager.instance == null || !GameManager.instance.isLive)
             return;
 
         anim.SetFloat("Speed", inputVec.magnitude);
@@ -58,25 +63,6 @@ public class Player : MonoBehaviour
         if (inputVec.x != 0)
         {
             spriter.flipX = inputVec.x < 0;
-        }
-    }
-
-    void OnCollisionStay2D(Collision2D collision)
-    {
-        if (!GameManager.instance.isLive)
-            return;
-
-        GameManager.instance.health -= Time.deltaTime * 10;
-
-        if (GameManager.instance.health < 0)
-        {
-            for (int index = 2; index < transform.childCount; index++)
-            {
-                transform.GetChild(index).gameObject.SetActive(false);
-            }
-
-            anim.SetTrigger("Dead");
-            GameManager.instance.GameOver();
         }
     }
 

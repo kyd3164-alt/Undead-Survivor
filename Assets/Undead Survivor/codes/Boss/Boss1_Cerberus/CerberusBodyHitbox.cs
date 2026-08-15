@@ -4,24 +4,49 @@ using UnityEngine;
 public class CerberusBodyHitbox : MonoBehaviour
 {
     [Header("Damage Settings")]
-    [Tooltip("보스 몸체 기본 데미지")]
+    [Tooltip("체크 해제 시 부모(Boss)의 damage 값을 자동으로 가져옵니다.")]
+    public bool useManualDamage = false;
+
+    [Tooltip("수동 설정 데미지")]
     public float baseBodyDamage = 10f;
 
     [Tooltip("보스 몸체 안에서 딜이 들어가는 주기 (초 단위)")]
     public float tickRate = 0.5f;
 
+    private Boss bossScript;
     // 플레이어가 여러 개의 콜라이더(자식 오브젝트 등)를 가질 때 타이머가 꼬이는 현상을 방지하기 위한 딕셔너리
     private Dictionary<Collider2D, float> activeColliders = new Dictionary<Collider2D, float>();
+
+    void Awake()
+    {
+        // 부모 오브젝트에서 Boss 스크립트를 찾아옵니다.
+        bossScript = GetComponentInParent<Boss>();
+    }
+
+    // 부모 Boss 스크립트의 데미지를 쓸지, 수동 데미지를 쓸지 결정하는 함수
+    float GetCurrentDamage()
+    {
+        if (!useManualDamage && bossScript != null)
+        {
+            return bossScript.damage; // 부모 보스 스크립트의 데미지 연동!
+        }
+        return baseBodyDamage;
+    }
 
     // 1. 처음 몸에 닿는 순간 즉시 딜
     private void OnTriggerEnter2D(Collider2D other)
     {
+        Debug.Log($"충돌 감지된 오브젝트: {other.name} (태그: {other.tag})");
+
         if (other.CompareTag("Player"))
         {
+            // 보스가 등장 중(Appearance)일 때는 데미지를 주지 않음
+            if (bossScript != null && bossScript.currentState == Boss.BossState.Appearance) return;
+
             PlayerHealth player = other.GetComponent<PlayerHealth>();
             if (player != null)
             {
-                player.TakeBossBodyDamage(baseBodyDamage);
+                player.TakeBossBodyDamage(GetCurrentDamage());
 
                 // 이 콜라이더에 대한 다음 딜 타이머 설정 (Time.time 기준)
                 activeColliders[other] = Time.time + tickRate;
@@ -34,13 +59,16 @@ public class CerberusBodyHitbox : MonoBehaviour
     {
         if (other.CompareTag("Player") && activeColliders.ContainsKey(other))
         {
+            // 보스가 등장 중(Appearance)일 때는 데미지를 주지 않음
+            if (bossScript != null && bossScript.currentState == Boss.BossState.Appearance) return;
+
             // 지정된 주기가 지났는지 확인
             if (Time.time >= activeColliders[other])
             {
                 PlayerHealth player = other.GetComponent<PlayerHealth>();
                 if (player != null)
                 {
-                    player.TakeBossBodyDamage(baseBodyDamage);
+                    player.TakeBossBodyDamage(GetCurrentDamage());
                 }
 
                 // 다음 딜 타이머 갱신

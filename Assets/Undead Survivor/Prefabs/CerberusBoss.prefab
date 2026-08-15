@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8416174129781035852}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: FirePoint_Center
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -40,7 +40,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6836799823953034451}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: FirePoint_Right
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -71,7 +71,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 183429521411224182}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: FirePoint_Left
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -108,9 +108,9 @@ GameObject:
   - component: {fileID: 3271502734973322349}
   - component: {fileID: 7688283086137746526}
   - component: {fileID: 3238413446998599993}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: CerberusBoss
-  m_TagString: Untagged
+  m_TagString: Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -200,7 +200,7 @@ Rigidbody2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7074805998275420168}
-  m_BodyType: 0
+  m_BodyType: 1
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
@@ -268,8 +268,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8769fbea0f73f564aae9bba26e4d7d20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CerberusBodyHitbox
+  useManualDamage: 0
   baseBodyDamage: 10
-  tickRate: 0.1
+  tickRate: 1
 --- !u!114 &7688283086137746526
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,33 +1,59 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviour
 {
-    [Header("Player Health")]
-    public float maxHp = 100f;
-    public float currentHp = 100f;
+    [Header("UI 연동")]
+    public Slider hpSlider;
 
     [Header("Fire Debuff Settings")]
-    [Tooltip("몸체 안에서 비빌 때 딜 증폭 배율 (2.0 = 2배)")]
     public float fireDamageMultiplier = 2.0f;
-
-    [Tooltip("화염 디버프 지속 시간 (초)")]
     public float burnDuration = 3.0f;
-
-    [Tooltip("화염 지속 딜 (1초마다 들어가는 딜)")]
     public float burnTickDamage = 5f;
+
+    [Header("피격 쿨타임 (연속 피격 방지)")]
+    public float bossDamageInterval = 0.5f;
+    private float lastBossDamageTime = 0f;
 
     private bool isOnFire = false;
     private Coroutine burnCoroutine;
+    private bool isDead = false;
 
     private void Start()
     {
-        currentHp = maxHp;
+        // GameManager의 체력을 초기화 및 동기화
+        GameManager.instance.maxHealth = 100f;
+        GameManager.instance.health = GameManager.instance.maxHealth;
+        UpdateHpUI();
     }
 
-    // 보스 몸 안(장판)에서 받는 데미지 처리
+    private void Update()
+    {
+        UpdateHpUI();
+    }
+
+    // 💥 일반 적(Enemy) 등에게 데미지를 입을 때 호출하는 함수
+    public void TakeDamage(float damage)
+    {
+        if (isDead) return;
+
+        GameManager.instance.health -= damage;
+        Debug.Log($"💥 [일반 적 피격] -{damage:F1} 데미지 | 남은 HP: {GameManager.instance.health:F1}");
+
+        CheckIsDead();
+    }
+
+    // 보스 몸 안에서 받는 데미지 처리
     public void TakeBossBodyDamage(float baseDamage)
     {
+        if (isDead) return;
+
+        if (Time.time - lastBossDamageTime < bossDamageInterval)
+            return;
+
+        lastBossDamageTime = Time.time;
+
         float finalDamage = baseDamage;
 
         if (isOnFire)
@@ -40,7 +66,9 @@ public class PlayerHealth : MonoBehaviour
             Debug.Log($"💥 [보스 몸체 딜] {finalDamage} 데미지 받음");
         }
 
-        currentHp -= finalDamage;
+        GameManager.instance.health -= finalDamage;
+        CheckIsDead();
+
         ApplyBurnDebuff(burnDuration, burnTickDamage);
     }
 
@@ -54,33 +82,75 @@ public class PlayerHealth : MonoBehaviour
     private IEnumerator BurnDebuffRoutine(float duration, float tickDamage)
     {
         float timer = 0f;
-        while (timer < duration)
+        while (timer < duration && !isDead)
         {
             yield return new WaitForSeconds(1.0f);
-            currentHp -= tickDamage;
+            GameManager.instance.health -= tickDamage;
             timer += 1.0f;
-            Debug.Log($"🔥 [화염 지속 도트딜] -{tickDamage} (남은 HP: {currentHp})");
+            Debug.Log($"🔥 [화염 지속 도트딜] -{tickDamage} (남은 HP: {GameManager.instance.health})");
+
+            CheckIsDead();
         }
 
         isOnFire = false;
         Debug.Log("불길이 꺼졌습니다.");
     }
 
-    // 💚 외부(MaxHpSkill 스크립트 등)에서 정해준 수치만큼 최대 체력을 늘려주는 함수
-    public void IncreaseMaxHp(float amount)
+    void UpdateHpUI()
     {
-        maxHp += amount;
-        currentHp += amount;
-
-        Debug.Log($"💚 [최대 체력 강화!] +{amount} 증가 -> (최대 HP: {maxHp} | 현재 HP: {currentHp})");
+        if (hpSlider != null && GameManager.instance.maxHealth > 0)
+        {
+            hpSlider.value = GameManager.instance.health / GameManager.instance.maxHealth;
+        }
     }
 
-    // 🧪 체력 회복 함수
+    private void CheckIsDead()
+    {
+        if (GameManager.instance.health <= 0 && !isDead)
+        {
+            GameManager.instance.health = 0;
+            isDead = true;
+            UpdateHpUI();
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        Debug.Log("💀 플레이어 사망!");
+
+        if (GameManager.instance != null)
+        {
+            Player playerScript = GetComponent<Player>();
+            if (playerScript != null)
+            {
+                for (int index = 2; index < transform.childCount; index++)
+                {
+                    transform.GetChild(index).gameObject.SetActive(false);
+                }
+
+                Animator anim = GetComponent<Animator>();
+                if (anim != null) anim.SetTrigger("Dead");
+            }
+
+            GameManager.instance.GameOver();
+        }
+    }
+
+    public void IncreaseMaxHp(float amount)
+    {
+        GameManager.instance.maxHealth += amount;
+        GameManager.instance.health += amount;
+        UpdateHpUI();
+    }
+
     public void Heal(float amount)
     {
-        currentHp += amount;
-        if (currentHp > maxHp) currentHp = maxHp;
+        if (isDead) return;
 
-        Debug.Log($"🧪 [체력 회복] 현재 HP: {currentHp}/{maxHp}");
+        GameManager.instance.health += amount;
+        if (GameManager.instance.health > GameManager.instance.maxHealth)
+            GameManager.instance.health = GameManager.instance.maxHealth;
+        UpdateHpUI();
     }
 }

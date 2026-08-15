@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,10 +31,10 @@ public class Enemy : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!GameManager.instance.isLive)
+        if (GameManager.instance == null || !GameManager.instance.isLive)
             return;
 
-        if (!isLive || anim.GetCurrentAnimatorStateInfo(0).IsName("Hit") )
+        if (!isLive || target == null || anim.GetCurrentAnimatorStateInfo(0).IsName("Hit"))
             return;
 
         Vector2 dirVec = target.position - rigid.position;
@@ -45,10 +45,10 @@ public class Enemy : MonoBehaviour
 
     void LateUpdate()
     {
-        if (!GameManager.instance.isLive)
+        if (GameManager.instance == null || !GameManager.instance.isLive)
             return;
 
-        if (!isLive)
+        if (!isLive || target == null)
             return;
 
         spriter.flipX = target.position.x < rigid.position.x;
@@ -56,7 +56,12 @@ public class Enemy : MonoBehaviour
 
     void OnEnable()
     {
-        target = GameManager.instance.player.GetComponent<Rigidbody2D>();
+        // 🌟 플레이어가 생성된 이후에 안전하게 타겟을 잡도록 수정
+        if (GameManager.instance != null && GameManager.instance.player != null)
+        {
+            target = GameManager.instance.player.GetComponent<Rigidbody2D>();
+        }
+
         isLive = true;
         coll.enabled = true;
         rigid.simulated = true;
@@ -85,7 +90,10 @@ public class Enemy : MonoBehaviour
             bullet = collision.GetComponentInParent<Bullet>();
         }
 
-        health -= bullet.damage;
+        if (bullet != null)
+        {
+            health -= bullet.damage;
+        }
 
         StartCoroutine(KnockBack());
 
@@ -116,13 +124,45 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    void OnCollisionStay2D(Collision2D collision)
+    {
+        if (GameManager.instance == null || !GameManager.instance.isLive || !isLive)
+            return;
+
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(10f * Time.deltaTime);
+            }
+        }
+    }
+
+    void OnTriggerStay2D(Collider2D collision)
+    {
+        if (GameManager.instance == null || !GameManager.instance.isLive || !isLive)
+            return;
+
+        if (collision.CompareTag("Player"))
+        {
+            PlayerHealth playerHealth = collision.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(10f * Time.deltaTime);
+            }
+        }
+    }
+
     IEnumerator KnockBack()
     {
         yield return wait;
-        Vector3 playerPos = GameManager.instance.player.transform.position;
-        Vector3 dirVec = transform.position - playerPos;
-        rigid.AddForce(dirVec.normalized * 3, ForceMode2D.Impulse);
-
+        if (GameManager.instance != null && GameManager.instance.player != null)
+        {
+            Vector3 playerPos = GameManager.instance.player.transform.position;
+            Vector3 dirVec = transform.position - playerPos;
+            rigid.AddForce(dirVec.normalized * 3, ForceMode2D.Impulse);
+        }
     }
 
     public void Dead()

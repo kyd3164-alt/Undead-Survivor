@@ -8,16 +8,18 @@ TagManager:
   - Area
   - Enemy
   - Bullet
+  - 1_Boss
+  - Boss
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player
   - Water
   - UI
   - Enemy
   - Area
-  - 
+  - Boss
   - 
   - 
   - 
