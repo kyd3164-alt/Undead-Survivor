@@ -299,10 +299,10 @@ MonoBehaviour:
   - {fileID: 183429521411224182}
   - {fileID: 8416174129781035852}
   - {fileID: 6836799823953034451}
-  fireBallPrefab: {fileID: 0}
-  lightningPrefab: {fileID: 0}
+  fireBallPrefab: {fileID: 7705572435672028678, guid: 1016738246a6b344babfd30dbbcc6ab7, type: 3}
+  lightningPrefab: {fileID: 299131898923328347, guid: d310d3b4c3464a24d82b07f1ee52727b, type: 3}
   jumpAttackRadius: 2.5
-  lavaPrefab: {fileID: 0}
+  lavaPrefab: {fileID: 7523879586210659637, guid: 6fd7102c20d91374a98de78a6f318cf4, type: 3}
   lavaDuration: 3
   lavaDamage: 5
   lavaRadius: 5

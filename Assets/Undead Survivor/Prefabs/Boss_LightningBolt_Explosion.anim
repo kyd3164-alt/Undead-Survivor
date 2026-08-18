@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Boss_Landing
+  m_Name: Boss_LightningBolt_Explosion
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,19 +21,23 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: -2224082463648377978, guid: 9c50894c6f8d1384ba922aaaf5887248, type: 3}
+      value: {fileID: 3478900866051008038, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
     - time: 0.083333336
-      value: {fileID: -5170776430336222310, guid: 933987110e2724b41b5f7f53013bd244, type: 3}
+      value: {fileID: 8649245942654608919, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
     - time: 0.16666667
-      value: {fileID: -3506039282194623409, guid: 52ac6401cbc96b74192a3fd40f3be6f7, type: 3}
+      value: {fileID: -4043592614628344678, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
     - time: 0.25
-      value: {fileID: 4807410696682081625, guid: b3f27488b4401d94899c9c34f1f76d23, type: 3}
+      value: {fileID: -7189858243234686647, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - time: 0.33333334
+      value: {fileID: 1666715984113564559, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - time: 0.41666666
+      value: {fileID: 640747551380598199, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
     script: {fileID: 0}
     flags: 2
-  m_SampleRate: 60
+  m_SampleRate: 12
   m_WrapMode: 0
   m_Bounds:
     m_Center: {x: 0, y: 0, z: 0}
@@ -50,16 +54,18 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: -2224082463648377978, guid: 9c50894c6f8d1384ba922aaaf5887248, type: 3}
-    - {fileID: -5170776430336222310, guid: 933987110e2724b41b5f7f53013bd244, type: 3}
-    - {fileID: -3506039282194623409, guid: 52ac6401cbc96b74192a3fd40f3be6f7, type: 3}
-    - {fileID: 4807410696682081625, guid: b3f27488b4401d94899c9c34f1f76d23, type: 3}
+    - {fileID: 3478900866051008038, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - {fileID: 8649245942654608919, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - {fileID: -4043592614628344678, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - {fileID: -7189858243234686647, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - {fileID: 1666715984113564559, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
+    - {fileID: 640747551380598199, guid: c22fc456e1797a64ba8c1cb2cdd67e35, type: 3}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.26666668
+    m_StopTime: 0.5
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -78,11 +84,4 @@ AnimationClip:
   m_EulerEditorCurves: []
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
-  m_Events:
-  - time: 0.25
-    functionName: SpawnLava
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
+  m_Events: []

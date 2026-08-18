@@ -38,7 +38,7 @@ public class Boss : MonoBehaviour
     public GameObject lavaPrefab;
     public float lavaDuration = 3f;
     public float lavaDamage = 5f;
-    public float lavaRadius = 2f;
+    public float lavaRadius = 3f; // 💡 장판 크기에 맞춰 타격 범위도 2 -> 3으로 변경
     public float slowDebuffAmount = 0.5f;
     public float debuffDuration = 2f;
 
@@ -58,8 +58,11 @@ public class Boss : MonoBehaviour
 
     private bool isAwakened = false;
     private SpriteRenderer spriteRenderer;
-    private Animator animator; // 애니메이터 컴포넌트 추가
+    private Animator animator; // 애니메이터 컴포넌트
     private Transform target;
+
+    // 💡 착지 목표 지점을 기억할 위치 변수
+    private Vector3 lastLandingPosition;
 
     void Awake()
     {
@@ -76,7 +79,7 @@ public class Boss : MonoBehaviour
 
         currentHealth = maxHealth;
 
-        // 💡 [자동 연동] 메인 캔버스 안의 "Boss Health Bar"를 코드로 자동 탐색 및 활성화
+        // [자동 연동] 메인 캔버스 안의 "Boss Health Bar"를 코드로 자동 탐색 및 활성화
         GameObject sliderObj = GameObject.Find("Boss Health Bar");
         if (sliderObj != null)
         {
@@ -111,7 +114,7 @@ public class Boss : MonoBehaviour
 
     void OnDestroy()
     {
-        // 💡 [자동 정리] 보스가 죽거나 사라질 때 메인 체력바 다시 끄기
+        // [자동 정리] 보스가 죽거나 사라질 때 메인 체력바 다시 끄기
         GameObject sliderObj = GameObject.Find("Boss Health Bar");
         if (sliderObj != null)
         {
@@ -288,7 +291,8 @@ public class Boss : MonoBehaviour
         yield return new WaitForSeconds(0.4f / attackSpeed);
 
         Vector3 startPos = transform.position;
-        Vector3 landingPos = target.position;
+        // 💡 플레이어의 현재 위치를 최종 착지 목표 위치로 저장
+        lastLandingPosition = target.position;
 
         float timer = 0f;
         float jumpDuration = 0.5f / attackSpeed;
@@ -297,31 +301,44 @@ public class Boss : MonoBehaviour
         while (timer < jumpDuration)
         {
             timer += Time.deltaTime;
-            transform.position = Vector3.Lerp(startPos, landingPos, timer / jumpDuration);
+            transform.position = Vector3.Lerp(startPos, lastLandingPosition, timer / jumpDuration);
             yield return null;
         }
 
-        // 2. 착지 모션 트리거 실행 (Land) 및 판정/장판 생성
+        // 2. 착지 모션 트리거 실행 (Land)
         if (animator != null) animator.SetTrigger("Land");
 
+        // 착지 시 직격 디버프 판정
         float distanceToPlayer = Vector2.Distance(transform.position, target.position);
         if (distanceToPlayer <= jumpAttackRadius)
         {
             ApplyDebuff(target.gameObject);
         }
 
-        if (lavaPrefab != null)
-        {
-            GameObject lava = Instantiate(lavaPrefab, landingPos, Quaternion.identity);
-            StartCoroutine(LavaRoutine(lava));
-        }
-
         yield return new WaitForSeconds(0.4f / attackSpeed);
     }
 
+    // 💡 착지 애니메이션 이벤트(Animation Event)에서 호출되는 용암 생성 함수
+    public void SpawnLava()
+    {
+        if (lavaPrefab != null)
+        {
+            // 1. 보스가 착지한 위치(lastLandingPosition)에 용암 생성
+            GameObject lava = Instantiate(lavaPrefab, lastLandingPosition, Quaternion.identity);
+
+            // 2. 💡 애니메이션 파일의 Scale을 무시하고 강제로 3배 확대 적용
+            lava.transform.localScale = new Vector3(3f, 3f, 1f);
+
+            StartCoroutine(LavaRoutine(lava));
+        }
+    }
+
+    // 💡 3초 지속 후 DoEnd 트리거를 실행하고 소멸하는 코루틴
     IEnumerator LavaRoutine(GameObject lava)
     {
         float elapsed = 0f;
+        Animator lavaAnim = lava.GetComponent<Animator>();
+
         while (elapsed < lavaDuration && lava != null)
         {
             if (target != null)
@@ -337,7 +354,18 @@ public class Boss : MonoBehaviour
             yield return new WaitForSeconds(1f);
         }
 
-        if (lava != null) Destroy(lava);
+        if (lava != null)
+        {
+            // 1. 사라지는 애니메이션(Lava_End) 트리거 실행
+            if (lavaAnim != null)
+            {
+                lavaAnim.SetTrigger("DoEnd");
+            }
+
+            // 2. Lava_End 애니메이션이 끝날 시간(약 0.5초) 대기 후 오브젝트 삭제
+            yield return new WaitForSeconds(0.5f);
+            Destroy(lava);
+        }
     }
 
     void ApplyDebuff(GameObject targetObj)
