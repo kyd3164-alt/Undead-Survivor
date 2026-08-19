@@ -1,49 +1,55 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class StraightProjectile : MonoBehaviour
 {
-    [Header("ÀÌµ¿ ¼Óµµ (ºü¸£°Ô ÃßÃµ)")]
+    [Header("ì´ë™ ì†ë„ (ë¹ ë¥´ê²Œ ì¶”ì²œ)")]
     public float speed = 15f;
 
-    [Header("µ¥¹ÌÁö ¼³Á¤")]
-    [Tooltip("ÀÎ½ºÆåÅÍ¿¡¼­ º¸½º Åõ»çÃ¼ÀÇ µ¥¹ÌÁö¸¦ Á¶ÀıÇÏ¼¼¿ä.")]
-    public int damage = 10; // ±âº»°ª 10, ÀÎ½ºÆåÅÍ¿¡¼­ º¯°æ °¡´É
+    [Header("ë°ë¯¸ì§€ ì„¤ì •")]
+    [Tooltip("ì¸ìŠ¤í™í„°ì—ì„œ ë³´ìŠ¤ íˆ¬ì‚¬ì²´ì˜ ë°ë¯¸ì§€ë¥¼ ì¡°ì ˆí•˜ì„¸ìš”.")]
+    public int damage = 10;
 
-    [Header("Ãæµ¹ ½Ã »ı¼ºÇÒ ÆÄÀÌ¾î ÆøÆÄ ÇÁ¸®ÆÕ")]
+    [Header("ì¶©ëŒ ì‹œ ìƒì„±í•  íŒŒì´ì–´ í­íŒŒ í”„ë¦¬íŒ¹")]
     public GameObject explosionPrefab;
 
-    // ³¯¾Æ°¥ ¹æÇâÀ» ±â¾ïÇÒ º¯¼ö
+    [Header("ìˆ˜ëª… ì„¤ì • (ëª‡ ì´ˆ ë’¤ì— ìë™ìœ¼ë¡œ í„°ì§ˆ ê²ƒì¸ê°€)")]
+    [Tooltip("í”Œë ˆì´ì–´ì—ê²Œ ë‹¿ì§€ ì•Šì•„ë„ ì´ ì‹œê°„ì´ ì§€ë‚˜ë©´ ìë™ìœ¼ë¡œ í„°ì§‘ë‹ˆë‹¤.")]
+    public float duration = 2.0f; // ğŸ’¡ ë²ˆê°œë³¼íŠ¸(duration) ë³€ìˆ˜ëª…ê³¼ ê¸°ëŠ¥ì„ ì™„ë²½ ì¼ì¹˜!
+
     private Vector2 moveDirection = Vector2.right;
+    private bool isExploded = false; // ğŸ’¡ ë²ˆê°œë³¼íŠ¸ ìŠ¤íƒ€ì¼ì˜ ì¤‘ë³µ í­ë°œ ì—ëŸ¬ ë°©ì§€ í”Œë˜ê·¸
 
     void Start()
     {
-        // 1. "Player" ÅÂ±×¸¦ °¡Áø ¿ÀºêÁ§Æ®¸¦ Ã£½À´Ï´Ù.
         GameObject player = GameObject.FindWithTag("Player");
 
         if (player != null)
         {
-            // 2. ÇÃ·¹ÀÌ¾î À§Ä¡ - ³» À§Ä¡ = ÇÃ·¹ÀÌ¾î¸¦ ÇâÇÏ´Â ¹æÇâ º¤ÅÍ °è»ê
             moveDirection = (player.transform.position - transform.position).normalized;
 
-            // 3. Åõ»çÃ¼ ÀÌ¹ÌÁö°¡ ÇÃ·¹ÀÌ¾î ÂÊÀ» ¹Ù¶óº¸µµ·Ï È¸Àü½ÃÅµ´Ï´Ù.
             float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
         }
         else
         {
-            Debug.LogWarning("¾À¿¡ 'Player' ÅÂ±×¸¦ °¡Áø ¿ÀºêÁ§Æ®¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù! ±âº» ¿À¸¥ÂÊÀ¸·Î ³¯¾Æ°©´Ï´Ù.");
+            Debug.LogWarning("ì”¬ì— 'Player' íƒœê·¸ë¥¼ ê°€ì§„ ì˜¤ë¸Œì íŠ¸ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤! ê¸°ë³¸ ì˜¤ë¥¸ìª½ìœ¼ë¡œ ë‚ ì•„ê°‘ë‹ˆë‹¤.");
         }
+
+        // ğŸš¨ ë²ˆê°œë³¼íŠ¸ì™€ ì™„ë²½íˆ ë™ì¼í•œ ë©”ì»¤ë‹ˆì¦˜ìœ¼ë¡œ ì˜ˆì•½ í­ë°œ íƒ€ì´ë¨¸ ê°€ë™
+        Invoke("Explode", duration);
     }
 
     void Update()
     {
-        // 4. Start¿¡¼­ °è»êÇÑ ÇÃ·¹ÀÌ¾î ¹æÇâÀ¸·Î ÀÌµ¿ÇÕ´Ï´Ù.
+        if (isExploded) return;
+
         transform.position += (Vector3)(moveDirection * speed * Time.deltaTime);
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // º¸½º(Enemy)³ª º¸½º ¹«±â ·¹ÀÌ¾î µî°ú´Â ºÎµúÇôµµ ÅÍÁöÁö ¾Ê°Ô ºĞ±â Ã³¸®
+        if (isExploded) return;
+
         if (collision.CompareTag("Enemy") || collision.gameObject.layer == LayerMask.NameToLayer("BossProjectile"))
         {
             return;
@@ -51,11 +57,10 @@ public class StraightProjectile : MonoBehaviour
 
         if (collision.CompareTag("Player"))
         {
-            // [Áß¿ä] ÇÃ·¹ÀÌ¾îÀÇ µ¥¹ÌÁö Ã³¸® ½ºÅ©¸³Æ®¸¦ °¡Á®¿Í µ¥¹ÌÁö¸¦ ÀÔÈü´Ï´Ù.
             var playerHealth = collision.GetComponent<PlayerHealth>();
             if (playerHealth != null)
             {
-                playerHealth.TakeDamage(damage); // ÀÎ½ºÆåÅÍ¿¡¼­ ¼³Á¤ÇÑ µ¥¹ÌÁö Àü´Ş
+                playerHealth.TakeDamage(damage);
             }
 
             Explode();
@@ -64,17 +69,18 @@ public class StraightProjectile : MonoBehaviour
 
     void Explode()
     {
+        // ğŸš¨ ì¤‘ë³µ í­ë°œë¡œ ì¸í•œ ë©”ëª¨ë¦¬ íŠ€ëŠ” í˜„ìƒ ë°©ì§€
+        if (isExploded) return;
+        isExploded = true;
+
+        CancelInvoke("Explode");
+
         if (explosionPrefab != null)
         {
-            // [¼öÁ¤µÈ ÇÙ½É ºÎºĞ] Æø¹ß ÀÌÆåÆ®¸¦ »ı¼ºÇÔ°ú µ¿½Ã¿¡ º¯¼ö(exp)¿¡ ´ã½À´Ï´Ù.
             GameObject exp = Instantiate(explosionPrefab, transform.position, Quaternion.identity);
-
-            // »ı¼ºµÈ Æø¹ß ÀÌÆåÆ®(°ËÀº ¿¬±â)¸¦ 0.5ÃÊ µÚ¿¡ ÀÚµ¿À¸·Î ÆÄ±«ÇÏµµ·Ï ¿¹¾àÇÕ´Ï´Ù.
-            // ¸¸¾à ¿¬±â°¡ ³Ê¹« ¿À·¡ ³²´Â °Í °°À¸¸é 0.5f¸¦ 0.3f µîÀ¸·Î ÁÙÀÌ½Ã¸é µË´Ï´Ù!
             Destroy(exp, 0.3f);
         }
 
-        // Åõ»çÃ¼ º»Ã¼´Â Áï½Ã »èÁ¦
         Destroy(gameObject);
     }
 }

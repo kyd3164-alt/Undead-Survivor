@@ -5,22 +5,35 @@ public class LevelUp : MonoBehaviour
     RectTransform rect;
     Item[] items;
 
-    // ➕ [추가] 현재 랜덤 가챠에 등장할 수 있는 최대 아이템 수
-    // (초기값: Item 6 제외를 위해 전체 개수 - 1 또는 기본 아이템 수)
     private int activeItemCount;
+
+    // ➕ 이번에 고를 수 있는 남은 횟수 저장 변수
+    private int remainingCount = 0;
 
     void Awake()
     {
         rect = GetComponent<RectTransform>();
         items = GetComponentsInChildren<Item>(true);
-
-        // 💡 처음에는 마지막 아이템(Item 6)을 제외한 수만큼만 가챠에 등장시킵니다.
-        // (만약 Canvas 하위에 Item 0~6까지 총 7개가 있다면 초기엔 6개만 뽑음)
         activeItemCount = items.Length - 1;
     }
 
+    // 🎯 [기존과 동일] 일반 경험치 레벨업용 함수 (인자값 없으므로 다른 소스코드 에러 안 남)
     public void Show()
     {
+        remainingCount = 1; // 일반 레벨업은 딱 1번만 고르기
+
+        Next();
+        rect.localScale = Vector3.one;
+        GameManager.instance.Stop();
+        AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);
+        AudioManager.instance.EffectBgm(true);
+    }
+
+    // 🚨 [새로 추가] 보스 처치용 5연속 레벨업 전용 함수!
+    public void ShowBossReward()
+    {
+        remainingCount = 5; // 보스 보상은 총 5번 고르기
+
         Next();
         rect.localScale = Vector3.one;
         GameManager.instance.Stop();
@@ -30,6 +43,19 @@ public class LevelUp : MonoBehaviour
 
     public void Hide()
     {
+        // 아이템을 하나 골랐으므로 남은 횟수를 1 감소시킵니다.
+        remainingCount--;
+
+        // 만약 아직도 고를 횟수가 남아있다면 (예: 5번 중 1번 골라서 4번 남은 경우)
+        if (remainingCount > 0)
+        {
+            Next(); // 새로운 아이템 3개로 리프레시
+            AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);
+            return; // 창을 닫지 않고 유지
+        }
+
+        // 남은 횟수가 0 이하이면 정상적으로 창을 닫고 게임 재개
+        remainingCount = 0;
         rect.localScale = Vector3.zero;
         GameManager.instance.Resume();
         AudioManager.instance.PlaySfx(AudioManager.Sfx.Select);
@@ -43,17 +69,14 @@ public class LevelUp : MonoBehaviour
 
     void Next()
     {
-        // 1. 모든 아이템 비활성화
         foreach (Item item in items)
         {
             item.gameObject.SetActive(false);
         }
 
-        // 2. 해금된 아이템 범위(activeItemCount) 내에서 랜덤 3개 아이템 활성화
         int[] ran = new int[3];
         while (true)
         {
-            // 💡 items.Length 대신 activeItemCount 범위 내에서만 무작위 추출!
             ran[0] = Random.Range(0, activeItemCount);
             ran[1] = Random.Range(0, activeItemCount);
             ran[2] = Random.Range(0, activeItemCount);
@@ -66,10 +89,8 @@ public class LevelUp : MonoBehaviour
         {
             Item ranItem = items[ran[index]];
 
-            // 3. 만렙 아이템의 경우는 소비아이템(Heal 등)으로 대체
             if (ranItem.level == ranItem.data.damages.Length)
             {
-                // Heal 아이템 index에 맞게 선택 (기존 코드 유지)
                 items[4].gameObject.SetActive(true);
             }
             else
@@ -79,10 +100,8 @@ public class LevelUp : MonoBehaviour
         }
     }
 
-    // ➕ [추가] 보스 처치 시 호출할 아이템 해금 함수
     public void UnlockItem(int itemId)
     {
-        // 전체 아이템 개수 범위까지 가챠 한도를 늘려 Item 6이 선택지에 나오게 함!
         activeItemCount = items.Length;
         Debug.Log($"🔓 [아이템 해금 완료] 이제 ID {itemId} 아이템이 레벨업 선택지에 등장합니다!");
     }

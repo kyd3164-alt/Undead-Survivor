@@ -64,6 +64,19 @@ public class Boss : MonoBehaviour
     // 💡 착지 목표 지점을 기억할 위치 변수
     private Vector3 lastLandingPosition;
 
+    // 꽂아줄 변수와 함수 (여기에 넣어주세요!)
+    private Slider hpSlider;
+
+    public void SetupHPBar(Slider slider)
+    {
+        hpSlider = slider;
+        if (hpSlider != null)
+        {
+            hpSlider.maxValue = maxHealth;
+            hpSlider.value = currentHealth;
+        }
+    }
+
     void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -86,31 +99,57 @@ public class Boss : MonoBehaviour
             sliderObj.SetActive(true); // 보스가 등장하면 체력바 켜기
         }
 
-        UpdateHealthUI();
-
         StartCoroutine(AppearanceRoutine());
         StartCoroutine(HealthRegenRoutine());
     }
 
     void Update()
     {
-        // 실시간 체력바 수치 동기화
-        UpdateHealthUI();
-    }
-
-    void UpdateHealthUI()
-    {
-        GameObject sliderObj = GameObject.Find("Boss Health Bar");
-        if (sliderObj != null)
+        // 1. [체력바 동기화] 스포너가 꽂아준 hpSlider가 존재할 때만 실시간 체력 수치를 동기화합니다.
+        if (hpSlider != null)
         {
-            Slider slider = sliderObj.GetComponent<Slider>();
-            if (slider != null)
+            hpSlider.value = currentHealth;
+        }
+
+        // 2. 🚨 [물리 엔진 완전 우회 - 확정 타격 시스템]
+        // 보스 스스로가 씬에 날아다니는 모든 총알/무기(Bullet)들을 직접 찾아냅니다.
+        Bullet[] activeBullets = Object.FindObjectsByType<Bullet>(FindObjectsSortMode.None);
+
+        foreach (Bullet bullet in activeBullets)
+        {
+            if (bullet == null || !bullet.gameObject.activeInHierarchy) continue;
+
+            // 보스 본체(내 위치)와 날아가는 무기 사이의 실제 수학적 거리 좌표를 직접 계산
+            float distance = Vector2.Distance(transform.position, bullet.transform.position);
+
+            // 💡 보스의 거대한 덩치(반지름 2.2m) 안에 무기가 들어왔다면 물리 충돌 무시하고 대미지 강제 집행!
+            if (distance <= 2.2f)
             {
-                slider.maxValue = maxHealth;
-                slider.value = currentHealth;
+                // [대미지 버그 안전장치] 무기 대미지가 0 이하라면 강제로 20f 대미지를 적용합니다.
+                float weaponDamage = bullet.damage <= 0 ? 20f : bullet.damage;
+
+                // 보스 내 자신의 TakeDamage 함수를 직접 실행하여 피를 깎아버립니다!
+                TakeDamage(weaponDamage);
+
+                // 🚨 [시각적 확인용 로그] 유니티 콘솔 창에 강제 타격 완료 로그를 확실하게 띄웁니다.
+                Debug.Log($"<color=#FF00FF>[보스 자체 확정 타격]</color> 무기 감지 완료! 거리: {distance:F2}m | 데미지: {weaponDamage}를 스스로 받았습니다.");
+
+                // 무한 관통 무기(id 0번, 5번)가 아니라면 대미지를 입었으니 해당 무기 오브젝트를 비활성화(소멸) 처리
+                if (bullet.id != 0 && bullet.id != 5)
+                {
+                    bullet.per--;
+                    if (bullet.per < 0)
+                    {
+                        Rigidbody2D bulletRigid = bullet.GetComponent<Rigidbody2D>();
+                        if (bulletRigid != null) bulletRigid.linearVelocity = Vector2.zero;
+                        bullet.gameObject.SetActive(false); // 무기 사라짐
+                    }
+                }
             }
         }
     }
+
+
 
     void OnDestroy()
     {
@@ -431,6 +470,11 @@ public class Boss : MonoBehaviour
 
         currentHealth -= finalDamage;
 
+        if (hpSlider != null)
+        {
+            hpSlider.value = currentHealth;
+        }
+
         Debug.Log($"<color=orange>[보스 피격]</color> 받은 데미지: {finalDamage:F1} | 남은 체력: {currentHealth:F1} / {maxHealth}");
 
         if (currentHealth <= 0)
@@ -465,6 +509,12 @@ public class Boss : MonoBehaviour
         defense *= awakenStatMultiplier;
         healthRegenPerSec *= awakenStatMultiplier;
 
+        if (hpSlider != null)
+        {
+            hpSlider.maxValue = maxHealth;
+            hpSlider.value = currentHealth;
+        }
+
         meleeAttackRange *= 1.3f;
         meleeAttackRadius *= 1.3f;
 
@@ -479,7 +529,7 @@ public class Boss : MonoBehaviour
         currentState = BossState.Move;
         StartCoroutine(BossLoop());
     }
-
+    
     IEnumerator Phase2StatScaling()
     {
         while (currentState != BossState.Dead && isPhase2OvertimeBuffActive)
@@ -492,6 +542,8 @@ public class Boss : MonoBehaviour
 
     void Die()
     {
+        // 🚨 [안전장치] 중복 사망 연출 방지
+        if (currentState == BossState.Dead) return;
         currentState = BossState.Dead;
 
         if (isPhase2OvertimeBuffActive)
@@ -500,17 +552,44 @@ public class Boss : MonoBehaviour
             if (phase2AuraEffect != null) phase2AuraEffect.SetActive(false);
         }
 
+        // 🎯 1번 보스(케르베로스) 처치 시 연출
         if (bossType == BossType.Boss1)
         {
-            LevelUp levelUpUI = FindFirstObjectByType<LevelUp>();
+            // 1. 플레이어 레벨을 강제로 5단계 먼저 올려줍니다.
+            GameManager.instance.level += 5;
+
+            LevelUp levelUpUI = GameObject.FindAnyObjectByType<LevelUp>();
             if (levelUpUI != null)
             {
-                levelUpUI.UnlockItem(6);
-                levelUpUI.Show();
+                levelUpUI.UnlockItem(6); // 6번 아이템 슬롯 해금
+                levelUpUI.ShowBossReward();        // 5연속 레벨업 선택창 최초 활성화 (여기서 시간 스케일 0 고정됨)
             }
         }
 
-        Destroy(gameObject, 2.0f);
+        // =========================================================
+        // 🚨 [누락 방지 핵심 치트 코드]
+        // Destroy(gameObject)를 바로 해버리면 스포너 대기 락이 풀려버립니다!
+        // 보스 오브젝트를 즉시 파괴하지 않고, 렌더러와 충돌체만 투명하게 숨겨둔 뒤
+        // 코루틴(대기 루틴)을 실행해 유저가 아이템 5개를 다 골라 시간(TimeScale)이 1로 복구될 때까지 
+        // 확실하게 기다렸다가 완전히 파괴 처리합니다.
+        // =========================================================
+        StartCoroutine(SafeDestroyRoutine());
+    }
+
+    // 🚨 보스가 죽은 뒤 레벨업 5번이 다 끝날 때까지 대기해주는 무적의 안전 코루틴
+    IEnumerator SafeDestroyRoutine()
+    {
+        // 1. 보스의 몸통 이미지와 부딪히는 히트박스를 꺼서 유령 상태로 만듭니다.
+        GetComponent<SpriteRenderer>().enabled = false;
+        Collider2D bCollider = GetComponentInChildren<Collider2D>();
+        if (bCollider != null) bCollider.enabled = false;
+
+        // 2. 🚨 유저가 5번 연속 아이템을 다 골라서 유니티 시간이 정상 배속(1f)으로 돌아올 때까지 멈춰서 무조건 대기합니다!
+        yield return new WaitUntil(() => Time.timeScale > 0.1f);
+
+        // 3. 아이템 가챠가 완전히 끝났으므로 유니티 전체 배속을 확실히 풀고 보스를 완전히 삭제합니다.
+        Time.timeScale = 1.0f;
+        Destroy(gameObject); // 이 순간 Spawner 코루틴의 boss == null이 감지되어 다음 웨이브로 넘어갑니다!
     }
 
     void OnCollisionStay2D(Collision2D collision)

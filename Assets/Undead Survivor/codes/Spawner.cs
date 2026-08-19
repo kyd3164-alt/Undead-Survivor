@@ -67,32 +67,73 @@ public class Spawner : MonoBehaviour
     }
 
     // --- 🌟 보스 등장 및 시간 정지/대기 코루틴 ---
+    // --- 🌟 보스 등장 및 시간 정지/대기 코루틴 ---
     IEnumerator BossSpawnRoutine()
     {
         isBossSpawning = true;
-        bossSpawnedList[level] = true; // 현재 레벨 구간의 보스는 소환했다고 체크
+        bossSpawnedList[level] = true;
 
-        Debug.Log($"웨이브 {level}구간 중간 지점 도달! 보스 등장 및 시간 일시 정지");
-
-        // 1. GameManager에게 보스 타임(시간 정지) 진입을 알림
+        // 1. GameManager에게 보스 타임 진입을 알림
         GameManager.instance.isBossTime = true;
 
-        // 2. 현재 웨이브(level)에 딱 맞는 보스를 배열에서 꺼내서 소환!
+        // 2. 🚨 [안전성 업그레이드] 인스펙터 배열 세팅에 맞추어 현재 level과 인덱스를 매칭하되,
+        // 혹시나 인스펙터 배열 크기가 level 수보다 작을 경우 에러가 나지 않도록 최댓값 방어 코드를 적용합니다.
         int bossIndex = Mathf.Min(level, bossPrefabs.Length - 1);
-        GameObject currentBossPrefab = bossPrefabs[bossIndex];
 
-        Vector3 spawnPos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
+        // 🚨 만약 실수로 해당 칸이 비어있다면(Null) 루틴을 즉시 탈출하여 게임이 굳는 것을 방지합니다.
+        if (bossPrefabs[bossIndex] == null)
+        {
+            Debug.LogError($"🚨 Spawner의 Boss Prefabs 배열 중 [Element {bossIndex}] 칸이 비어있어 보스를 소환할 수 없습니다!");
+            GameManager.instance.isBossTime = false;
+            isBossSpawning = false;
+            yield break;
+        }
+
+        GameObject currentBossPrefab = bossPrefabs[bossIndex];
+        string currentBossName = currentBossPrefab.name.Replace("(Clone)", "");
+
+        // 3. 보스 소환 위치 계산 및 소환
+        Vector3 spawnPos = bossSpawnPoint != null ? bossSpawnPoint.position : GameManager.instance.player.transform.position + new Vector3(0, 8f, 0);
         GameObject boss = Instantiate(currentBossPrefab, spawnPos, Quaternion.identity);
 
-        // 3. 보스가 죽어서 파괴(null)될 때까지 스포너와 웨이브 진행을 대기
+        // 4. 일반 몹 제거
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        foreach (GameObject enemy in enemies)
+        {
+            if (enemy != null)
+            {
+                Rigidbody2D enemyRigid = enemy.GetComponent<Rigidbody2D>();
+                if (enemyRigid != null) enemyRigid.linearVelocity = Vector2.zero;
+                enemy.SetActive(false);
+            }
+        }
+
+        // 5. 연출을 위한 시간 정지
+        Time.timeScale = 0f;
+
+        // 🚨 텍스트가 흘러가는 부드러운 연출 코루틴 실행 및 끝날 때까지 대기
+        yield return StartCoroutine(BossUIController.instance.PlayBossAppearance(currentBossName));
+
+        // 6. 연출이 끝났으므로 유니티 시간 재개 (이때 경험치 밑의 체력바가 켜짐)
+        Time.timeScale = 1.0f;
+
+        // 7. 생성된 보스에게 UI 슬라이더 컴포넌트 넘겨주기
+        Boss bScript = boss.GetComponent<Boss>();
+        if (bScript != null && BossUIController.instance.bossHPBar != null)
+        {
+            bScript.SetupHPBar(BossUIController.instance.bossHPBar.GetComponent<UnityEngine.UI.Slider>());
+        }
+
+        // 8. 보스가 죽을 때까지 대기
         yield return new WaitUntil(() => boss == null);
 
-        Debug.Log("보스 처치 완료! 게임 시간 재개 및 웨이브 복구");
+        // 9. 보스 처치 완료 후 체력바 끄기
+        if (BossUIController.instance.bossHPBar != null) BossUIController.instance.bossHPBar.SetActive(false);
 
-        // 4. 보스가 죽으면 GameManager에게 시간 재개를 알림
         GameManager.instance.isBossTime = false;
         isBossSpawning = false;
     }
+
 }
 
 [System.Serializable]

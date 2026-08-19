@@ -202,7 +202,7 @@ Rigidbody2D:
   m_GameObject: {fileID: 7074805998275420168}
   m_BodyType: 1
   m_Simulated: 1
-  m_UseFullKinematicContacts: 0
+  m_UseFullKinematicContacts: 1
   m_UseAutoMass: 0
   m_Mass: 1
   m_LinearDamping: 0
@@ -285,13 +285,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   bossType: 0
   currentState: 0
-  maxHealth: 35000
+  maxHealth: 180000
   currentHealth: 0
   speed: 10
   damage: 20
   attackSpeed: 1
-  defense: 30
-  healthRegenPerSec: 10
+  defense: 100
+  healthRegenPerSec: 20000
   meleeAttackRange: 3
   meleeAttackRadius: 2
   rangedAttackCooldown: 2
