@@ -265,9 +265,11 @@ public class Boss : MonoBehaviour
             {
                 if (firePoints[i] == null) continue;
 
-                Vector3 strikePos = target != null ? target.position + (Vector3)Random.insideUnitCircle * 1.5f : transform.position;
-                Instantiate(lightningPrefab, strikePos, Quaternion.identity);
+                // [수정 완료] 이제 플레이어 위치가 아닌 보스 입 위치(firePoints[i].position)에서 생성됩니다!
+                Vector3 spawnPos = firePoints[i].position;
+                Instantiate(lightningPrefab, spawnPos, Quaternion.identity);
 
+                // 동시에 발사되면 어색하므로 0.15초씩 간격을 두고 발사
                 yield return new WaitForSeconds(0.15f);
             }
         }
