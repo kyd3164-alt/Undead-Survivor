@@ -11949,19 +11949,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
   spawnData:
-  - spawnTime: 0.5
+  - spawnTime: 0.05
     spriteType: 0
     health: 30
     speed: 1.5
-  - spawnTime: 0.4
+  - spawnTime: 0.05
     spriteType: 1
     health: 200
     speed: 3
-  - spawnTime: 0.3
+  - spawnTime: 0.05
     spriteType: 2
     health: 1000
     speed: 5
-  - spawnTime: 0.2
+  - spawnTime: 0.05
     spriteType: 3
     health: 4000
     speed: 12
@@ -11969,7 +11969,7 @@ MonoBehaviour:
   bossPrefabs:
   - {fileID: 0}
   - {fileID: 7074805998275420168, guid: 217d09045e076744bbf29cb578644f75, type: 3}
-  - {fileID: 0}
+  - {fileID: 9166566957494523618, guid: 0248624203c86764fa04632482af1fe3, type: 3}
   - {fileID: 0}
   bossSpawnPoint: {fileID: 0}
 --- !u!1 &583300852
@@ -26976,14 +26976,14 @@ MonoBehaviour:
   isLive: 0
   isBossTime: 0
   gameTime: 0
-  maxGameTime: 300
+  maxGameTime: 30
   playerId: 0
   health: 0
   maxHealth: 100
   level: 0
   kill: 0
   exp: 0
-  nextExp: 01000000030000000500000007000000090000000b0000000d0000000f0000001100000013000000
+  nextExp: 0100000002000000030000000400000005000000060000000700000008000000090000000a000000
   pool: {fileID: 1357769272}
   player: {fileID: 480896621}
   uiLevelUp: {fileID: 914895502}

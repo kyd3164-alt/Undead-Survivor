@@ -110,7 +110,7 @@ GameObject:
   - component: {fileID: 3238413446998599993}
   m_Layer: 8
   m_Name: CerberusBoss
-  m_TagString: Boss
+  m_TagString: 1_Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -308,7 +308,8 @@ MonoBehaviour:
   lavaRadius: 5
   slowDebuffAmount: 0.5
   debuffDuration: 2
-  bulletPrefab: {fileID: 0}
+  slashPrefab: {fileID: 0}
+  skillPrefab: {fileID: 0}
   awakenStatMultiplier: 1.5
   minionPrefab: {fileID: 0}
   spawnPoints:

@@ -43,9 +43,31 @@ public class Boss : MonoBehaviour
     public float debuffDuration = 2f;
 
     [Header("========================================")]
-    [Header("       [Boss 2 & Boss 3 탄막 전용]       ")]
+    [Header("       [Boss 2 : 악천 전용]        ")]
     [Header("========================================")]
-    public GameObject bulletPrefab;
+
+    [Tooltip("Boss2의 주변 검 휘두르기 연출 프리팹")]
+    public GameObject slashPrefab;
+
+    [Tooltip("Boss2의 범위 공격 + 회복 오라 프리팹")]
+    public GameObject skillPrefab;
+
+    [Header("--- Boss2 주변 참격 피해 설정 ---")]
+
+    [Tooltip("주변 참격이 피해를 주는 범위")]
+    public float slashRadius = 4f;
+
+    [Tooltip("참격이 처음 발생할 때 들어가는 강한 피해")]
+    public float slashInitialDamage = 50f;
+
+    [Tooltip("초기 피해 이후 지속적으로 들어가는 피해")]
+    public float slashDamagePerSecond = 10f;
+
+    [Tooltip("지속 피해를 몇 초마다 한 번 적용할지")]
+    public float slashTickInterval = 0.5f;
+
+    [Tooltip("지속 피해가 유지되는 시간")]
+    public float slashDamageDuration = 3f;
 
     [Header("========================================")]
     [Header("         [Boss 3 : 드래곤 각성 전용]      ")]
@@ -416,36 +438,246 @@ public class Boss : MonoBehaviour
 
     IEnumerator Pattern_RangedShotgun()
     {
+        // 1. 공격 상태로 전환 및 시간 기록
         currentState = BossState.Attack_Ranged;
         lastRangedAttackTime = Time.time;
 
-        spriteRenderer.color = new Color(0.5f, 0f, 0.5f);
+        // 공격 전 전조 증상 딜레이 (0.8초 동안 기 모으기)
+        spriteRenderer.color = new Color(0.5f, 0f, 0.5f); // 보라색으로 충전 이펙트 느낌
         yield return new WaitForSeconds(0.8f / attackSpeed);
         spriteRenderer.color = Color.white;
 
-        if (bulletPrefab != null)
+        // 2. 50% 확률로 슬래시 공격을 하거나, 자가 버프 스킬을 시전합니다.
+        if (Random.value > 0.5f)
         {
-            int count = (bossType == BossType.Boss3 && isAwakened) ? 16 : 8;
-            float angleStep = 360f / count;
+            // ==========================================
+            // [패턴 A: 오로라 주변 참격]
+            // ==========================================
 
-            for (int i = 0; i < count; i++)
+            if (animator != null)
             {
-                float angle = i * angleStep;
-                Quaternion rotation = Quaternion.Euler(0, 0, angle);
-                GameObject bullet = Instantiate(bulletPrefab, transform.position, rotation);
+                animator.SetTrigger("doSlash");
+            }
 
-                Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
-                if (bulletRb != null)
+            // 보스 몸 그래픽 숨기기
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = false;
+            }
+
+            // Boss2에 붙어서 따라다니는 슬래시 스킬 생성
+            if (slashPrefab != null)
+            {
+                GameObject slash = Instantiate(
+                    slashPrefab,
+                    transform.position,
+                    Quaternion.identity,
+                    transform
+                );
+
+                // 생성된 SlashPrefab의 몸 그래픽 숨기기
+                SpriteRenderer slashRenderer =
+                    slash.GetComponent<SpriteRenderer>();
+
+                if (slashRenderer != null)
                 {
-                    Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
-                    bulletRb.linearVelocity = dir * 5f;
+                    // 처음에는 보이게
+                    slashRenderer.enabled = true;
+
+                    // 2초 후 몸 그래픽 숨기기
+                    StartCoroutine(HideSlashBodyAfterDelay(slashRenderer, 2f));
                 }
+            }
+
+            // 주변 순간 피해
+            ApplySlashInitialDamage();
+
+            // 주변 지속 피해
+            StartCoroutine(SlashDamageOverTime());
+
+            // 2초 후 보스 몸 다시 표시
+            StartCoroutine(RestoreBossSpriteAfterSlash());
+        }
+        else
+        {
+            // ==========================================
+            // [패턴 B: 오로라 버프 스킬 시전]
+            // ==========================================
+            // 애니메이터에서 세팅한 doSkill 트리거 발동 (보스 버프 모션 취함)
+            animator.SetTrigger("doSkill");
+
+            // 보스 몸 그래픽 숨기기
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = false;
+            }
+
+            if (skillPrefab != null)
+            {
+                // 보스 몸 위치에 버프 이펙트 프리팹 소환 (보스를 쫓아다니게 하려면 transform을 부모로 설정)
+                GameObject skill = Instantiate(skillPrefab, transform.position, Quaternion.identity, transform);
+
+                // 보스 자체 능력치 강화 (예: 공격 속도 일시 증가)
+                attackSpeed += 0.2f;
+
+                // 3초 뒤에 능력치 원상복구
+                StartCoroutine(ResetBuff(3f));
+
+                // 버프 이펙트의 SpriteRenderer 가져오기
+                SpriteRenderer skillRenderer =
+                    skill.GetComponent<SpriteRenderer>();
+
+                // 3초 후 이펙트 SpriteRenderer 끄기
+                StartCoroutine(EndBuffVisual(
+                    skillRenderer,
+                    3f
+                ));
             }
         }
 
+        // 3. 공격 후딜레이 후 다시 이동 상태로 복귀
         yield return new WaitForSeconds(0.8f / attackSpeed);
         currentState = BossState.Move;
     }
+
+    // ==========================================
+    // 버프 스킬 종료 후 버프 그래픽 끄기
+    // + 보스 몸 그래픽 다시 표시
+    // ==========================================
+    IEnumerator EndBuffVisual(
+    SpriteRenderer skillRenderer,
+    float delay
+)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // 버프 이펙트 그래픽 끄기
+        if (skillRenderer != null)
+        {
+            skillRenderer.enabled = false;
+        }
+
+        // 보스 몸 그래픽 다시 켜기
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.enabled = true;
+        }
+    }
+
+    // ==========================================
+    // 슬래시 종료 후 보스 몸 다시 표시
+    // ==========================================
+    IEnumerator RestoreBossSpriteAfterSlash()
+    {
+        yield return new WaitForSeconds(2f);
+
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.enabled = true;
+        }
+    }
+
+    IEnumerator HideSlashBodyAfterDelay(SpriteRenderer slashRenderer, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (slashRenderer != null)
+        {
+            slashRenderer.enabled = false;
+        }
+    }
+
+    void ApplySlashInitialDamage()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+        {
+            return;
+        }
+
+        Transform player =
+            GameManager.instance.player.transform;
+
+        float distance =
+            Vector2.Distance(
+                transform.position,
+                player.position
+            );
+
+        if (distance <= slashRadius)
+        {
+            PlayerHealth playerHealth =
+                player.GetComponent<PlayerHealth>();
+
+            if (playerHealth != null)
+            {
+                playerHealth.TakeBossBodyDamage(
+                    slashInitialDamage
+                );
+
+                Debug.Log(
+                    $"<color=red>[Boss2 주변 참격]</color> " +
+                    $"초기 피해 {slashInitialDamage} 적용!"
+                );
+            }
+        }
+    }
+
+    IEnumerator SlashDamageOverTime()
+    {
+        float elapsed = 0f;
+
+        while (elapsed < slashDamageDuration)
+        {
+            yield return new WaitForSeconds(
+                slashTickInterval
+            );
+
+            elapsed += slashTickInterval;
+
+            if (GameManager.instance == null ||
+                GameManager.instance.player == null)
+            {
+                continue;
+            }
+
+            Transform player =
+                GameManager.instance.player.transform;
+
+            float distance =
+                Vector2.Distance(
+                    transform.position,
+                    player.position
+                );
+
+            // 지속 피해 범위 안에 플레이어가 있는지 확인
+            if (distance <= slashRadius)
+            {
+                PlayerHealth playerHealth =
+                    player.GetComponent<PlayerHealth>();
+
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeBossBodyDamage(
+                        slashDamagePerSecond
+                    );
+
+                    Debug.Log(
+                        $"<color=orange>[Boss2 주변 참격]</color> " +
+                        $"지속 피해 {slashDamagePerSecond} 적용!"
+                    );
+                }
+            }
+        }
+    }
+
+    // 버프 지속시간이 끝나면 보스 능력치를 원래대로 돌려놓는 서브 기능입니다.
+    IEnumerator ResetBuff(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        attackSpeed -= 0.2f; // 증가했던 공격 속도 차감
+    }
+
 
     void SpawnMinions()
     {
@@ -458,6 +690,33 @@ public class Boss : MonoBehaviour
                 Instantiate(minionPrefab, point.position, Quaternion.identity);
             }
         }
+    }
+
+    public void HealFromAura(float amount)
+    {
+        if (currentState == BossState.Dead)
+            return;
+
+        if (amount <= 0f)
+            return;
+
+        currentHealth += amount;
+
+        if (currentHealth > maxHealth)
+        {
+            currentHealth = maxHealth;
+        }
+
+        if (hpSlider != null)
+        {
+            hpSlider.value = currentHealth;
+        }
+
+        Debug.Log(
+            $"<color=green>[Boss2 회복]</color> " +
+            $"회복량: {amount:F1} | " +
+            $"현재 체력: {currentHealth:F1} / {maxHealth}"
+        );
     }
 
     // 외부(무기 등)에서 데미지를 줄 때 호출하는 함수
