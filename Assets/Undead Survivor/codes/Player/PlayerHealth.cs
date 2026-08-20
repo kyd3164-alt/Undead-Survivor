@@ -19,12 +19,16 @@ public class PlayerHealth : MonoBehaviour
     private bool isOnFire = false;
     private Coroutine burnCoroutine;
     private bool isDead = false;
+    private float baseMaxHealth = 100f;
 
     private void Start()
     {
-        // GameManager의 체력을 초기화 및 동기화
-        GameManager.instance.maxHealth = 100f;
-        GameManager.instance.health = GameManager.instance.maxHealth;
+        if (GameManager.instance.maxHealth <= 0)
+        {
+            GameManager.instance.maxHealth = baseMaxHealth;
+            GameManager.instance.health = baseMaxHealth;
+        }
+
         UpdateHpUI();
     }
 
@@ -137,10 +141,20 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    public void IncreaseMaxHp(float amount)
+    public void IncreaseMaxHp(float percent)
     {
-        GameManager.instance.maxHealth += amount;
-        GameManager.instance.health += amount;
+        // 항상 기본 최대 HP 100을 기준으로 증가량 계산
+        float increaseAmount = baseMaxHealth * (percent / 100f);
+
+        GameManager.instance.maxHealth += increaseAmount;
+        GameManager.instance.health += increaseAmount;
+
+        Debug.Log($"❤️ HP 증가!");
+        Debug.Log($"증가율: {percent}%");
+        Debug.Log($"증가량: +{increaseAmount}");
+        Debug.Log($"현재 HP: {GameManager.instance.health}");
+        Debug.Log($"최대 HP: {GameManager.instance.maxHealth}");
+
         UpdateHpUI();
     }
 

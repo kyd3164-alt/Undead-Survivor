@@ -15,16 +15,17 @@ MonoBehaviour:
   itemType: 5
   itemId: 6
   itemName: "\uC6A9\uAE30\uC758 \uAD8C\uB2A5"
-  itemDesc: "\uCD5C\uB300 \uCCB4\uB825\uC774 {0} \uC99D\uAC00"
+  itemDesc: "\uCD5C\uB300 \uCCB4\uB825\uC774 {0}% \uC99D\uAC00"
   itemIcon: {fileID: 5168003128175742307, guid: 9041fdaa8eeb6bc4492f9f1a6bc7a214, type: 3}
   baseDamage: 0
   baseCount: 0
   damages:
-  - 50
-  - 50
-  - 50
-  - 50
-  - 100
+  - 150
+  - 150
+  - 150
+  - 150
+  - 300
   counts: 
+  healthPercent: 0
   projectile: {fileID: 0}
   hand: {fileID: 0}

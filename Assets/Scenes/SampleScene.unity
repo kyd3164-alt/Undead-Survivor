@@ -11192,6 +11192,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
   currentExp: 0
+  currentHealth: 0
+  maxHealth: 0
 --- !u!114 &480896631
 MonoBehaviour:
   m_ObjectHideFlags: 0

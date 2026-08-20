@@ -1,4 +1,4 @@
-using Unity.VisualScripting;
+﻿using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,7 +28,14 @@ public class Item : MonoBehaviour
 
     void OnEnable()
     {
-        textLevel.text = "Lv." + (level + 1);
+        if (data.itemType == ItemData.ItemType.Heal)
+        {
+            textLevel.text = "";
+        }
+        else
+        {
+            textLevel.text = "Lv." + (level + 1);
+        }
 
         switch (data.itemType)
         {
@@ -36,11 +43,20 @@ public class Item : MonoBehaviour
             case ItemData.ItemType.Range:
                 textDesc.text = string.Format(data.itemDesc, data.damages[level] * 100, data.counts[level]);
                 break;
+
             case ItemData.ItemType.Glove:
             case ItemData.ItemType.Shoe:
-            case ItemData.ItemType.Health:
                 textDesc.text = string.Format(data.itemDesc, data.damages[level] * 100);
                 break;
+
+            case ItemData.ItemType.Health:
+                textDesc.text = string.Format(data.itemDesc, data.damages[level]);
+                break;
+
+            case ItemData.ItemType.Heal:
+                textDesc.text = data.itemDesc;
+                break;
+
             default:
                 textDesc.text = string.Format(data.itemDesc);
                 break;
@@ -49,6 +65,8 @@ public class Item : MonoBehaviour
 
     public void OnClick()
     {
+        Debug.Log($"🟢 클릭한 아이템: {data.itemName} / 타입: {data.itemType}");
+
         switch (data.itemType)
         {
             case ItemData.ItemType.Melee:
@@ -72,9 +90,9 @@ public class Item : MonoBehaviour
 
                 level++;
                 break;
+
             case ItemData.ItemType.Glove:
             case ItemData.ItemType.Shoe:
-            case ItemData.ItemType.Health:
                 if (level == 0)
                 {
                     GameObject newGear = new GameObject();
@@ -88,15 +106,46 @@ public class Item : MonoBehaviour
                 }
                 level++;
                 break;
+
             case ItemData.ItemType.Heal:
-                GameManager.instance.health = GameManager.instance.maxHealth;
+                PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+
+                if (playerHealth != null)
+                {
+                    playerHealth.Heal(GameManager.instance.maxHealth);
+                }
+
+                break;
+
+            case ItemData.ItemType.Health:
+                Debug.Log($"❤️ 최대 체력 아이템 선택! Lv.{level + 1}");
+
+                PlayerHealth health = FindFirstObjectByType<PlayerHealth>();
+
+                if (health != null)
+                {
+                    float healthPercent = data.damages[level];
+
+                    Debug.Log($"❤️ 증가율: {healthPercent}%");
+
+                    health.IncreaseMaxHp(healthPercent);
+                }
+                else
+                {
+                    Debug.LogError("❌ PlayerHealth를 찾지 못했습니다!");
+                }
+
+                level++;
                 break;
         }
 
 
-        if (level == data.damages.Length)
+        if (data.itemType != ItemData.ItemType.Heal && data.itemType != ItemData.ItemType.Health)
         {
-            GetComponent<Button>().interactable = false;
+            if (level == data.damages.Length)
+            {
+                GetComponent<Button>().interactable = false;
+            }
         }
     }
 }
