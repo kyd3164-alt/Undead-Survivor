@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Item", menuName = "Scriptble Object/ItemDate")]
+[CreateAssetMenu(fileName = "Item", menuName = "Scriptable Object/ItemData")]
 public class ItemData : ScriptableObject
 {
     // =========================================================
@@ -22,17 +22,40 @@ public class ItemData : ScriptableObject
 
 
     // =========================================================
+    // Effect Type
+    // =========================================================
+
+    public enum EffectType
+    {
+        None,
+
+        WeaponDamage,
+        ProjectileCount,
+
+        AllDamage,
+
+        AttackSpeed,
+        MoveSpeed,
+
+        MaxHealth,
+
+        BloodHit,
+        HopeOfHope
+    }
+
+
+    // =========================================================
     // Item Effect
     // =========================================================
 
     [System.Serializable]
     public class ItemEffect
     {
-        [Tooltip("아이템 효과 종류")]
-        public ItemType itemType;
+        [Tooltip("실제로 적용되는 효과 종류")]
+        public EffectType effectType = EffectType.None;
 
-        [Tooltip("레벨별 효과 수치")]
-        public float[] values;
+        [Tooltip("레벨별 효과 수치\nElement 0 = Lv1\nElement 1 = Lv2\n...\nElement 4 = Lv5")]
+        public float[] values = new float[5];
     }
 
 
@@ -42,27 +65,21 @@ public class ItemData : ScriptableObject
 
     [Header("# Main Info")]
 
-    // 기존 코드와의 호환성을 위해 유지
+    [Tooltip("아이템 자체의 종류")]
     public ItemType itemType;
 
+    [Tooltip("아이템 ID")]
     public int itemId;
 
+    [Tooltip("아이템 이름")]
     public string itemName;
 
     [TextArea]
+    [Tooltip("아이템 설명")]
     public string itemDesc;
 
+    [Tooltip("아이템 아이콘")]
     public Sprite itemIcon;
-
-
-    // =========================================================
-    // Item Effects
-    // =========================================================
-
-    [Header("# Item Effects")]
-
-    [Tooltip("하나의 아이템이 가질 수 있는 여러 효과")]
-    public ItemEffect[] itemEffects;
 
 
     // =========================================================
@@ -71,17 +88,21 @@ public class ItemData : ScriptableObject
 
     [Header("# Level Data")]
 
-    [Tooltip("기본 데미지")]
-    public float baseDamage;
+    [Tooltip("레벨별 데미지\nElement 0 = Lv1 ~ Element 4 = Lv5")]
+    public float[] damages = new float[5];
 
-    [Tooltip("기본 투사체 개수")]
-    public int baseCount;
+    [Tooltip("레벨별 투사체 개수\nElement 0 = Lv1 ~ Element 4 = Lv5")]
+    public int[] counts = new int[5];
 
-    [Tooltip("레벨별 데미지")]
-    public float[] damages;
 
-    [Tooltip("레벨별 투사체 개수")]
-    public int[] counts;
+    // =========================================================
+    // Item Effects
+    // =========================================================
+
+    [Header("# Item Effects")]
+
+    [Tooltip("하나의 아이템에 여러 효과를 넣을 수 있습니다.")]
+    public ItemEffect[] itemEffects;
 
 
     // =========================================================
@@ -90,29 +111,15 @@ public class ItemData : ScriptableObject
 
     [Header("# Weapon")]
 
+    [Tooltip("Weapon이 사용할 Projectile")]
     public GameObject projectile;
 
+    [Tooltip("플레이어 손에 표시할 Sprite")]
     public Sprite hand;
 
 
     // =========================================================
     // 최대 레벨
-    // =========================================================
-    //
-    // Damages의 Size와
-    // Item Effects > Values의 Size 중
-    // 가장 큰 값을 최대 레벨로 사용한다.
-    //
-    // 예:
-    //
-    // Damages = Size 5
-    //
-    // Item Effects
-    // ├─ Range      Values Size 5
-    // └─ GunDamage  Values Size 5
-    //
-    // → 최대 레벨 = 5
-    //
     // =========================================================
 
     public int GetMaxLevel()
@@ -121,16 +128,28 @@ public class ItemData : ScriptableObject
 
 
         // -----------------------------------------------------
-        // Damages
+        // Damage
         // -----------------------------------------------------
 
         if (damages != null)
         {
-            maxLevel =
-                Mathf.Max(
-                    maxLevel,
-                    damages.Length
-                );
+            maxLevel = Mathf.Max(
+                maxLevel,
+                damages.Length
+            );
+        }
+
+
+        // -----------------------------------------------------
+        // Count
+        // -----------------------------------------------------
+
+        if (counts != null)
+        {
+            maxLevel = Mathf.Max(
+                maxLevel,
+                counts.Length
+            );
         }
 
 
@@ -148,12 +167,10 @@ public class ItemData : ScriptableObject
                 if (effect.values == null)
                     continue;
 
-
-                maxLevel =
-                    Mathf.Max(
-                        maxLevel,
-                        effect.values.Length
-                    );
+                maxLevel = Mathf.Max(
+                    maxLevel,
+                    effect.values.Length
+                );
             }
         }
 
@@ -168,20 +185,137 @@ public class ItemData : ScriptableObject
 
     public bool IsMaxLevel(int currentLevel)
     {
-        // Heal은 레벨업 아이템이 아님
+        // Heal은 기존 시스템대로 계속 선택 가능
         if (itemType == ItemType.Heal)
             return false;
 
 
-        int maxLevel =
-            GetMaxLevel();
+        int maxLevel = GetMaxLevel();
 
 
-        // 최대 레벨이 0이면 선택 불가능한 데이터
         if (maxLevel <= 0)
             return true;
 
 
         return currentLevel >= maxLevel;
+    }
+
+
+    // =========================================================
+    // Damage 가져오기
+    // =========================================================
+
+    public float GetDamage(int level)
+    {
+        if (damages == null ||
+            damages.Length == 0)
+        {
+            return 0f;
+        }
+
+
+        int index = Mathf.Clamp(
+            level - 1,
+            0,
+            damages.Length - 1
+        );
+
+
+        return damages[index];
+    }
+
+
+    // =========================================================
+    // Count 가져오기
+    // =========================================================
+
+    public int GetCount(int level)
+    {
+        if (counts == null ||
+            counts.Length == 0)
+        {
+            return 0;
+        }
+
+
+        int index = Mathf.Clamp(
+            level - 1,
+            0,
+            counts.Length - 1
+        );
+
+
+        return counts[index];
+    }
+
+
+    // =========================================================
+    // Effect 찾기
+    // =========================================================
+
+    public ItemEffect GetEffect(EffectType type)
+    {
+        if (itemEffects == null)
+            return null;
+
+
+        foreach (ItemEffect effect in itemEffects)
+        {
+            if (effect == null)
+                continue;
+
+
+            if (effect.effectType == type)
+                return effect;
+        }
+
+
+        return null;
+    }
+
+
+    // =========================================================
+    // Effect 값 가져오기
+    // =========================================================
+
+    public float GetEffectValue(
+        EffectType type,
+        int level)
+    {
+        ItemEffect effect =
+            GetEffect(type);
+
+
+        if (effect == null)
+            return 0f;
+
+
+        if (effect.values == null ||
+            effect.values.Length == 0)
+        {
+            return 0f;
+        }
+
+
+        int index = Mathf.Clamp(
+            level - 1,
+            0,
+            effect.values.Length - 1
+        );
+
+
+        return effect.values[index];
+    }
+
+
+    // =========================================================
+    // Effect 존재 여부
+    // =========================================================
+
+    public bool HasItemEffects()
+    {
+        return
+            itemEffects != null &&
+            itemEffects.Length > 0;
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+Ôªøusing UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
@@ -7,11 +7,21 @@ public class Weapon : MonoBehaviour
     // =========================================================
 
     public int id;
+
     public int prefabId = -1;
 
     public float damage;
+
     public int count;
+
     public float speed;
+
+
+    // =========================================================
+    // Raw Damage
+    // =========================================================
+
+    public float rawDamage;
 
 
     // =========================================================
@@ -19,6 +29,7 @@ public class Weapon : MonoBehaviour
     // =========================================================
 
     float timer;
+
     Player player;
 
 
@@ -30,7 +41,8 @@ public class Weapon : MonoBehaviour
     {
         if (GameManager.instance != null)
         {
-            player = GameManager.instance.player;
+            player =
+                GameManager.instance.player;
         }
     }
 
@@ -44,12 +56,16 @@ public class Weapon : MonoBehaviour
         if (GameManager.instance == null)
             return;
 
+
         if (!GameManager.instance.isLive)
             return;
 
+
         if (player == null)
         {
-            player = GameManager.instance.player;
+            player =
+                GameManager.instance.player;
+
 
             if (player == null)
                 return;
@@ -58,80 +74,32 @@ public class Weapon : MonoBehaviour
 
         switch (id)
         {
-            // =================================================
-            // Melee / »∏¿¸«¸ π´±‚
-            // =================================================
-
             case 0:
             case 5:
 
                 transform.Rotate(
-                    Vector3.back * speed * Time.deltaTime
+                    Vector3.back *
+                    speed *
+                    Time.deltaTime
                 );
 
                 break;
 
 
-            // =================================================
-            // Range / Gun / πﬂªÁ«¸ π´±‚
-            // =================================================
-
             default:
 
-                timer += Time.deltaTime;
+                timer +=
+                    Time.deltaTime;
+
 
                 if (timer >= speed)
                 {
                     timer = 0f;
+
                     Fire();
                 }
 
                 break;
-        }
-
-
-        // =====================================================
-        // Test Code
-        // =====================================================
-
-        if (Input.GetButtonDown("Jump"))
-        {
-            LevelUp(10, 1);
-        }
-    }
-
-
-    // =========================================================
-    // Level Up
-    // =========================================================
-
-    public void LevelUp(float damage, int count)
-    {
-        this.damage = damage * Character.Damage;
-
-        this.count += count;
-
-
-        // =====================================================
-        // »∏¿¸«¸ π´±‚
-        // =====================================================
-
-        if (id == 0 || id == 5)
-        {
-            Batch();
-        }
-
-
-        // =====================================================
-        // ¿Â∫Ò »ø∞˙ ¿˚øÎ
-        // =====================================================
-
-        if (player != null)
-        {
-            player.BroadcastMessage(
-                "ApplyGear",
-                SendMessageOptions.DontRequireReceiver
-            );
         }
     }
 
@@ -142,14 +110,10 @@ public class Weapon : MonoBehaviour
 
     public void Init(ItemData data)
     {
-        // =====================================================
-        // ±‚∫ª ∞ÀªÁ
-        // =====================================================
-
         if (data == null)
         {
             Debug.LogError(
-                "[Weapon] ItemData∞° null¿‘¥œ¥Ÿ."
+                "[Weapon] ItemDataÍ∞Ä nullÏûÖÎãàÎã§."
             );
 
             return;
@@ -159,7 +123,7 @@ public class Weapon : MonoBehaviour
         if (GameManager.instance == null)
         {
             Debug.LogError(
-                "[Weapon] GameManager.instance∞° null¿‘¥œ¥Ÿ."
+                "[Weapon] GameManager.instanceÍ∞Ä ÏóÜÏäµÎãàÎã§."
             );
 
             return;
@@ -169,7 +133,7 @@ public class Weapon : MonoBehaviour
         if (GameManager.instance.pool == null)
         {
             Debug.LogError(
-                "[Weapon] GameManager¿« Pool¿Ã null¿‘¥œ¥Ÿ."
+                "[Weapon] PoolÏù¥ ÏóÜÏäµÎãàÎã§."
             );
 
             return;
@@ -179,211 +143,95 @@ public class Weapon : MonoBehaviour
         if (GameManager.instance.pool.prefabs == null)
         {
             Debug.LogError(
-                "[Weapon] Pool.prefabs∞° null¿‘¥œ¥Ÿ."
+                "[Weapon] Pool.prefabsÍ∞Ä ÏóÜÏäµÎãàÎã§."
             );
 
             return;
         }
 
 
-        if (player == null)
-        {
-            player = GameManager.instance.player;
-        }
+        player =
+            GameManager.instance.player;
 
 
         if (player == null)
         {
             Debug.LogError(
-                "[Weapon] Player∏¶ √£¿ª ºˆ æ¯Ω¿¥œ¥Ÿ."
+                "[Weapon] PlayerÎ•º Ï∞æÏùÑ Ïàò ÏóÜÏäµÎãàÎã§."
             );
 
             return;
         }
 
 
-        // =====================================================
-        // Basic Set
-        // =====================================================
+        // -----------------------------------------------------
+        // Basic
+        // -----------------------------------------------------
 
-        name = "Weapon" + data.itemId;
-
-        transform.parent = player.transform;
-
-        transform.localPosition = Vector3.zero;
-
-        transform.localRotation = Quaternion.identity;
+        name =
+            "Weapon_" +
+            data.itemId;
 
 
-        // =====================================================
-        // Property Set
-        // =====================================================
-
-        id = data.itemId;
-
-        damage =
-            data.baseDamage *
-            Character.Damage;
-
-        count =
-            data.baseCount +
-            Character.Count;
+        transform.SetParent(
+            player.transform
+        );
 
 
-        // =====================================================
-        // Projectile ID √ ±‚»≠
-        // =====================================================
-
-        prefabId = -1;
+        transform.localPosition =
+            Vector3.zero;
 
 
-        // =====================================================
-        // Projectile ∞ÀªÁ
-        // =====================================================
-
-        if (data.projectile == null)
-        {
-            Debug.LogError(
-                "[Weapon] " +
-                data.itemName +
-                "¿« Projectile¿Ã ¡ˆ¡§µ«¡ˆ æ æ“Ω¿¥œ¥Ÿ."
-            );
-        }
-        else
-        {
-            bool found = false;
+        transform.localRotation =
+            Quaternion.identity;
 
 
-            // =================================================
-            // Poolø°º≠ Projectile √£±‚
-            // =================================================
+        // -----------------------------------------------------
+        // ID
+        // -----------------------------------------------------
 
-            for (
-                int index = 0;
-                index < GameManager.instance.pool.prefabs.Length;
-                index++
-            )
-            {
-                GameObject prefab =
-                    GameManager.instance.pool.prefabs[index];
+        id =
+            data.itemId;
 
 
-                if (prefab == null)
-                    continue;
+        // -----------------------------------------------------
+        // Lv1 Data
+        // -----------------------------------------------------
+
+        ApplyLevelData(
+            data,
+            1
+        );
 
 
-                if (data.projectile == prefab)
-                {
-                    prefabId = index;
+        // -----------------------------------------------------
+        // Projectile
+        // -----------------------------------------------------
 
-                    found = true;
-
-                    Debug.Log(
-                        "[Weapon] Projectile ø¨∞· º∫∞¯\n" +
-                        "Item : " + data.itemName + "\n" +
-                        "Projectile : " + data.projectile.name + "\n" +
-                        "Prefab ID : " + prefabId
-                    );
-
-                    break;
-                }
-            }
+        FindPrefabId(
+            data
+        );
 
 
-            // =================================================
-            // Projectile¿ª √£¡ˆ ∏¯«— ∞ÊøÏ
-            // =================================================
+        // -----------------------------------------------------
+        // Weapon Speed
+        // -----------------------------------------------------
 
-            if (!found)
-            {
-                Debug.LogError(
-                    "[Weapon] Projectile¿ª Poolø°º≠ √£¿ª ºˆ æ¯Ω¿¥œ¥Ÿ.\n" +
-                    "Item : " + data.itemName + "\n" +
-                    "Projectile : " + data.projectile.name
-                );
-            }
-        }
+        SetWeaponSpeed();
 
 
-        // =====================================================
-        // Weapon Type
-        // =====================================================
+        // -----------------------------------------------------
+        // Hand
+        // -----------------------------------------------------
 
-        switch (id)
-        {
-            // =================================================
-            // »∏¿¸«¸ π´±‚
-            // =================================================
-
-            case 0:
-            case 5:
-
-                speed =
-                    150f *
-                    Character.WeaponSpeed;
-
-                Batch();
-
-                break;
+        ApplyHand(
+            data
+        );
 
 
-            // =================================================
-            // πﬂªÁ«¸ π´±‚
-            // =================================================
-
-            default:
-
-                speed =
-                    0.5f *
-                    Character.WeaponRate;
-
-                break;
-        }
-
-
-        // =====================================================
-        // Hand Set
-        // =====================================================
-
-        if (data.hand != null)
-        {
-            int handIndex =
-                (int)data.itemType;
-
-
-            if (
-                player.hands != null &&
-                handIndex >= 0 &&
-                handIndex < player.hands.Length &&
-                player.hands[handIndex] != null
-            )
-            {
-                Hand hand =
-                    player.hands[handIndex];
-
-
-                if (hand.spriter != null)
-                {
-                    hand.spriter.sprite =
-                        data.hand;
-                }
-
-
-                hand.gameObject.SetActive(true);
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "[Weapon] Hand∏¶ √£¿ª ºˆ æ¯Ω¿¥œ¥Ÿ.\n" +
-                    "Item : " + data.itemName
-                );
-            }
-        }
-
-
-        // =====================================================
-        // Apply Gear
-        // =====================================================
+        // -----------------------------------------------------
+        // Gear
+        // -----------------------------------------------------
 
         player.BroadcastMessage(
             "ApplyGear",
@@ -393,7 +241,243 @@ public class Weapon : MonoBehaviour
 
 
     // =========================================================
-    // Prefab ID ∞ÀªÁ
+    // Level Data
+    // =========================================================
+
+    public void ApplyLevelData(
+        ItemData data,
+        int level)
+    {
+        if (data == null)
+            return;
+
+
+        int safeLevel =
+            Mathf.Max(
+                1,
+                level
+            );
+
+
+        rawDamage =
+            data.GetDamage(
+                safeLevel
+            );
+
+
+        count =
+            data.GetCount(
+                safeLevel
+            ) +
+            Character.Count;
+
+
+        if (count < 0)
+            count = 0;
+
+
+        RecalculateDamage();
+
+
+        SetWeaponSpeed();
+
+
+        if (id == 0 ||
+            id == 5)
+        {
+            Batch();
+        }
+    }
+
+
+    // =========================================================
+    // Count Ïû¨Í≥ÑÏÇ∞
+    // =========================================================
+
+    public void RebuildCount(
+        ItemData data,
+        int level)
+    {
+        if (data == null)
+            return;
+
+
+        count =
+            data.GetCount(level) +
+            Character.Count;
+
+
+        if (count < 0)
+            count = 0;
+
+
+        if (id == 0 ||
+            id == 5)
+        {
+            Batch();
+        }
+    }
+
+
+    // =========================================================
+    // Damage Ïû¨Í≥ÑÏÇ∞
+    // =========================================================
+
+    public void RecalculateDamage()
+    {
+        float characterDamage =
+            Character.Damage;
+
+
+        if (characterDamage <= 0f)
+            characterDamage = 1f;
+
+
+        damage =
+            rawDamage *
+            characterDamage *
+            (1f +
+             Item.AllDamageBonusRate);
+
+
+        if (damage < 0f)
+            damage = 0f;
+    }
+
+
+    // =========================================================
+    // Weapon Speed
+    // =========================================================
+
+    void SetWeaponSpeed()
+    {
+        switch (id)
+        {
+            case 0:
+            case 5:
+
+                speed =
+                    150f *
+                    Character.WeaponSpeed;
+
+                break;
+
+
+            default:
+
+                speed =
+                    0.5f *
+                    Character.WeaponRate;
+
+                break;
+        }
+    }
+
+
+    // =========================================================
+    // Projectile Prefab ID
+    // =========================================================
+
+    void FindPrefabId(
+        ItemData data)
+    {
+        prefabId = -1;
+
+
+        if (data.projectile == null)
+        {
+            Debug.LogError(
+                "[Weapon] ProjectileÏù¥ ÏóÜÏäµÎãàÎã§.\n" +
+                "Item : " +
+                data.itemName
+            );
+
+            return;
+        }
+
+
+        for (
+            int index = 0;
+            index <
+            GameManager.instance.pool.prefabs.Length;
+            index++)
+        {
+            GameObject prefab =
+                GameManager.instance.pool.prefabs[index];
+
+
+            if (prefab == null)
+                continue;
+
+
+            if (prefab == data.projectile)
+            {
+                prefabId =
+                    index;
+
+                break;
+            }
+        }
+
+
+        if (prefabId < 0)
+        {
+            Debug.LogError(
+                "[Weapon] ProjectileÏùÑ PoolÏóêÏÑú Ï∞æÏßÄ Î™ªÌñàÏäµÎãàÎã§.\n" +
+                "Item : " +
+                data.itemName
+            );
+        }
+    }
+
+
+    // =========================================================
+    // Hand
+    // =========================================================
+
+    void ApplyHand(
+        ItemData data)
+    {
+        if (data.hand == null)
+            return;
+
+
+        int handIndex =
+            (int)data.itemType;
+
+
+        if (player.hands == null)
+            return;
+
+
+        if (handIndex < 0 ||
+            handIndex >= player.hands.Length)
+            return;
+
+
+        Hand hand =
+            player.hands[handIndex];
+
+
+        if (hand == null)
+            return;
+
+
+        if (hand.spriter != null)
+        {
+            hand.spriter.sprite =
+                data.hand;
+        }
+
+
+        hand.gameObject.SetActive(
+            true
+        );
+    }
+
+
+    // =========================================================
+    // prefabId Í≤ÄÏÇ¨
     // =========================================================
 
     bool IsValidPrefabId()
@@ -401,30 +485,33 @@ public class Weapon : MonoBehaviour
         if (GameManager.instance == null)
             return false;
 
+
         if (GameManager.instance.pool == null)
             return false;
+
 
         if (GameManager.instance.pool.prefabs == null)
             return false;
 
+
         if (prefabId < 0)
             return false;
 
-        if (
-            prefabId >=
-            GameManager.instance.pool.prefabs.Length
-        )
+
+        if (prefabId >=
+            GameManager.instance.pool.prefabs.Length)
         {
             return false;
         }
 
+
         if (
-            GameManager.instance.pool.prefabs[prefabId] ==
-            null
-        )
+            GameManager.instance.pool.prefabs[prefabId]
+            == null)
         {
             return false;
         }
+
 
         return true;
     }
@@ -436,84 +523,69 @@ public class Weapon : MonoBehaviour
 
     void Batch()
     {
-        if (GameManager.instance == null)
-            return;
-
-
-        if (GameManager.instance.pool == null)
-            return;
-
-
-        // =====================================================
-        // Prefab ID ∞ÀªÁ
-        // =====================================================
-
         if (!IsValidPrefabId())
         {
             Debug.LogError(
-                "[Weapon] Batch Ω«∆– - prefabId∞° ¿Ø»ø«œ¡ˆ æ Ω¿¥œ¥Ÿ.\n" +
-                "Weapon ID : " + id + "\n" +
-                "Prefab ID : " + prefabId
+                "[Weapon] Batch Ïã§Ìå® - prefabId Ïò§Î•ò"
             );
 
             return;
         }
 
-
-        // =====================================================
-        // Count ∞ÀªÁ
-        // =====================================================
 
         if (count <= 0)
-        {
-            Debug.LogWarning(
-                "[Weapon] count∞° 0 ¿Ã«œ¿‘¥œ¥Ÿ.\n" +
-                "Weapon ID : " + id
-            );
-
             return;
+
+
+        // Í∏∞Ï°¥ ÏûêÏãù ÏàòÎ≥¥Îã§ Ï§ÑÏñ¥Îì† Í≤ΩÏö∞
+        // Ï¥àÍ≥ºÎêú ÌÉÑÌôòÏùÑ ÎπÑÌôúÏÑ±Ìôî
+        for (
+            int index = count;
+            index < transform.childCount;
+            index++)
+        {
+            Transform extraBullet =
+                transform.GetChild(index);
+
+
+            if (extraBullet != null)
+            {
+                extraBullet.gameObject.SetActive(
+                    false
+                );
+            }
         }
 
 
-        // =====================================================
-        // Bullet ª˝º∫
-        // =====================================================
-
-        for (int index = 0; index < count; index++)
+        for (
+            int index = 0;
+            index < count;
+            index++)
         {
             Transform bullet;
 
 
-            // =================================================
-            // ±‚¡∏ Bullet ¿ÁªÁøÎ
-            // =================================================
-
-            if (index < transform.childCount)
+            if (index <
+                transform.childCount)
             {
                 bullet =
                     transform.GetChild(index);
+
+
+                bullet.gameObject.SetActive(
+                    true
+                );
             }
-
-
-            // =================================================
-            // ªı∑ŒøÓ Bullet ª˝º∫
-            // =================================================
-
             else
             {
                 GameObject bulletObject =
-                    GameManager.instance.pool.Get(prefabId);
+                    GameManager.instance.pool.Get(
+                        prefabId
+                    );
 
 
                 if (bulletObject == null)
-                {
-                    Debug.LogError(
-                        "[Weapon] Poolø°º≠ Bullet¿ª ∞°¡Æø¿¡ˆ ∏¯«ﬂΩ¿¥œ¥Ÿ.\n" +
-                        "Prefab ID : " + prefabId
-                    );
-
                     return;
-                }
 
 
                 bullet =
@@ -526,20 +598,13 @@ public class Weapon : MonoBehaviour
             }
 
 
-            // =================================================
-            // Bullet ¿ßƒ°
-            // =================================================
-
             bullet.localPosition =
                 Vector3.zero;
+
 
             bullet.localRotation =
                 Quaternion.identity;
 
-
-            // =================================================
-            // »∏¿¸
-            // =================================================
 
             Vector3 rotVec =
                 Vector3.forward *
@@ -548,43 +613,26 @@ public class Weapon : MonoBehaviour
                 count;
 
 
-            bullet.Rotate(rotVec);
-
-
-            // =================================================
-            // ∞≈∏Æ
-            // =================================================
-
-            bullet.Translate(
-                bullet.up * 1.5f,
-                Space.World
+            bullet.Rotate(
+                rotVec
             );
 
 
-            // =================================================
-            // Bullet Component
-            // =================================================
+            bullet.Translate(
+                bullet.up *
+                1.5f,
+                Space.World
+            );
+
 
             Bullet bulletComponent =
                 bullet.GetComponent<Bullet>();
 
 
             if (bulletComponent == null)
-            {
-                Debug.LogError(
-                    "[Weapon] Projectileø° Bullet.cs∞° æ¯Ω¿¥œ¥Ÿ.\n" +
-                    "Projectile : " + bullet.name
-                );
-
                 continue;
-            }
 
 
-            // =================================================
-            // Bullet √ ±‚»≠
-            // =================================================
-
-            // -100 = Infinity Per
             bulletComponent.Init(
                 damage,
                 -100,
@@ -605,69 +653,25 @@ public class Weapon : MonoBehaviour
             return;
 
 
-        // =====================================================
-        // GameManager ∞ÀªÁ
-        // =====================================================
-
         if (GameManager.instance == null)
             return;
 
 
-        // =====================================================
-        // Pool ∞ÀªÁ
-        // =====================================================
-
         if (GameManager.instance.pool == null)
-        {
-            Debug.LogError(
-                "[Weapon] Pool¿Ã æ¯Ω¿¥œ¥Ÿ."
-            );
-
             return;
-        }
 
-
-        // =====================================================
-        // Scanner ∞ÀªÁ
-        // =====================================================
 
         if (player.scanner == null)
-        {
-            Debug.LogWarning(
-                "[Weapon] Player Scanner∞° æ¯Ω¿¥œ¥Ÿ."
-            );
-
             return;
-        }
 
-
-        // =====================================================
-        // Target ∞ÀªÁ
-        // =====================================================
 
         if (!player.scanner.nearestTarget)
             return;
 
 
-        // =====================================================
-        // Projectile ID ∞ÀªÁ
-        // =====================================================
-
         if (!IsValidPrefabId())
-        {
-            Debug.LogError(
-                "[Weapon] prefabId∞° ¿Ø»ø«œ¡ˆ æ æ∆ πﬂªÁ«“ ºˆ æ¯Ω¿¥œ¥Ÿ.\n" +
-                "Weapon ID : " + id + "\n" +
-                "Prefab ID : " + prefabId
-            );
-
             return;
-        }
 
-
-        // =====================================================
-        // Direction
-        // =====================================================
 
         Vector3 targetPos =
             player.scanner.nearestTarget.position;
@@ -678,35 +682,25 @@ public class Weapon : MonoBehaviour
             transform.position;
 
 
-        if (dir.sqrMagnitude <= 0.0001f)
+        if (dir.sqrMagnitude <=
+            0.0001f)
+        {
             return;
+        }
 
 
         dir.Normalize();
 
 
-        // =====================================================
-        // Get Bullet
-        // =====================================================
-
         GameObject bulletObject =
-            GameManager.instance.pool.Get(prefabId);
+            GameManager.instance.pool.Get(
+                prefabId
+            );
 
 
         if (bulletObject == null)
-        {
-            Debug.LogError(
-                "[Weapon] Poolø°º≠ Bullet¿ª ∞°¡Æø¿¡ˆ ∏¯«ﬂΩ¿¥œ¥Ÿ.\n" +
-                "Prefab ID : " + prefabId
-            );
-
             return;
-        }
 
-
-        // =====================================================
-        // Bullet Transform
-        // =====================================================
 
         Transform bullet =
             bulletObject.transform;
@@ -723,28 +717,13 @@ public class Weapon : MonoBehaviour
             );
 
 
-        // =====================================================
-        // Bullet Component
-        // =====================================================
-
         Bullet bulletComponent =
             bullet.GetComponent<Bullet>();
 
 
         if (bulletComponent == null)
-        {
-            Debug.LogError(
-                "[Weapon] πﬂªÁ√ºø° Bullet.cs∞° æ¯Ω¿¥œ¥Ÿ.\n" +
-                "Projectile : " + bullet.name
-            );
-
             return;
-        }
 
-
-        // =====================================================
-        // Fire
-        // =====================================================
 
         bulletComponent.Init(
             damage,
@@ -753,10 +732,6 @@ public class Weapon : MonoBehaviour
             id
         );
 
-
-        // =====================================================
-        // Sound
-        // =====================================================
 
         if (AudioManager.instance != null)
         {

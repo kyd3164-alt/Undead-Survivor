@@ -3,122 +3,607 @@ using UnityEngine.UI;
 
 public class Item : MonoBehaviour
 {
+    // =========================================================
+    // Static Item Effects
+    // =========================================================
+
+    public static float AllDamageBonusRate { get; private set; }
+
+    public static float BloodHitRate { get; private set; }
+
+    public static float HopeOfHopeRate { get; private set; }
+
+
+    // =========================================================
+    // Item Data
+    // =========================================================
+
+    [Header("# Item Data")]
+
     public ItemData data;
-    public int level;
 
-    public Weapon weapon;
-    public Gear gear;
 
-    Image icon;
-    Text textLevel;
-    Text textName;
-    Text textDesc;
+    [Header("# Current Level")]
+
+    [Range(1, 5)]
+    public int level = 1;
 
 
     // =========================================================
-    // 모든 피해 증가
+    // Runtime
     // =========================================================
 
-    public static float AllDamageBonusRate { get; private set; } = 0f;
+    Weapon weapon;
 
+    Gear gear;
 
-    // =========================================================
-    // 블러드 히트
-    // =========================================================
-
-    public static float BloodHitRate { get; private set; } = 0f;
+    Button button;
 
 
     // =========================================================
-    // 희망의 호프
-    // =========================================================
-
-    public static float HopeOfHopeRate { get; private set; } = 0f;
-
-
-    // =========================================================
-    // 초기화
+    // Awake
     // =========================================================
 
     void Awake()
     {
-        Image[] images =
-            GetComponentsInChildren<Image>();
+        button =
+            GetComponent<Button>();
+    }
 
 
-        if (images.Length > 1)
+    // =========================================================
+    // OnEnable
+    // =========================================================
+
+    void OnEnable()
+    {
+        if (button == null)
         {
-            icon = images[1];
-
-            if (data != null)
-            {
-                icon.sprite =
-                    data.itemIcon;
-            }
-        }
-
-
-        Text[] texts =
-            GetComponentsInChildren<Text>();
-
-
-        if (texts.Length >= 3)
-        {
-            textLevel = texts[0];
-            textName = texts[1];
-            textDesc = texts[2];
-        }
-
-
-        if (textName != null && data != null)
-        {
-            textName.text =
-                data.itemName;
+            button =
+                GetComponent<Button>();
         }
     }
 
 
     // =========================================================
-    // UI 활성화
+    // Click
     // =========================================================
 
-    void OnEnable()
+    public void OnClick()
     {
+        if (data == null)
+        {
+            Debug.LogError(
+                "[Item] ItemData가 연결되지 않았습니다."
+            );
+
+            return;
+        }
+
+
+        // -----------------------------------------------------
+        // Heal
+        // -----------------------------------------------------
+
+        if (data.itemType == ItemData.ItemType.Heal)
+        {
+            HealPlayer();
+
+            return;
+        }
+
+
+        // -----------------------------------------------------
+        // 기존 아이템인지 확인
+        // -----------------------------------------------------
+
+        bool isExistingItem =
+            FindExistingItem();
+
+
+        // -----------------------------------------------------
+        // 신규 아이템
+        // -----------------------------------------------------
+
+        if (!isExistingItem)
+        {
+            level = 1;
+
+            CreateItem();
+
+            ApplyCurrentEffects();
+
+            UpdateUI();
+
+            UpdateButtonState();
+
+            return;
+        }
+
+
+        // -----------------------------------------------------
+        // 이미 존재하는 아이템 → Level Up
+        // -----------------------------------------------------
+
+        if (data.IsMaxLevel(level))
+        {
+            Debug.Log(
+                "[Item] 이미 최대 레벨입니다: " +
+                data.itemName
+            );
+
+            return;
+        }
+
+
+        level++;
+
+        ApplyLevelUp();
+
+        ApplyCurrentEffects();
+
         UpdateUI();
+
         UpdateButtonState();
     }
 
 
     // =========================================================
-    // 최대 레벨 여부
+    // 기존 Item 찾기
     // =========================================================
 
-    public bool IsMaxLevel()
+    bool FindExistingItem()
     {
-        if (data == null)
-            return true;
+        if (GameManager.instance == null)
+            return false;
 
 
-        return data.IsMaxLevel(level);
+        if (GameManager.instance.player == null)
+            return false;
+
+
+        Weapon[] weapons =
+            GameManager.instance.player
+                .GetComponentsInChildren<Weapon>(true);
+
+
+        foreach (Weapon currentWeapon in weapons)
+        {
+            if (currentWeapon == null)
+                continue;
+
+
+            if (currentWeapon.id == data.itemId)
+            {
+                weapon =
+                    currentWeapon;
+
+                return true;
+            }
+        }
+
+
+        Gear[] gears =
+            GameManager.instance.player
+                .GetComponentsInChildren<Gear>(true);
+
+
+        foreach (Gear currentGear in gears)
+        {
+            if (currentGear == null)
+                continue;
+
+
+            GearDataMatch(
+                currentGear
+            );
+
+
+            if (currentGear.type == data.itemType)
+            {
+                gear =
+                    currentGear;
+
+                return true;
+            }
+        }
+
+
+        return false;
     }
 
 
     // =========================================================
-    // 최대 레벨 반환
+    // Gear 비교
     // =========================================================
 
-    public int GetMaxLevel()
+    void GearDataMatch(Gear currentGear)
     {
-        if (data == null)
-            return 0;
-
-
-        return data.GetMaxLevel();
+        if (currentGear == null)
+            return;
     }
 
 
     // =========================================================
-    // UI 갱신
+    // 아이템 생성
+    // =========================================================
+
+    void CreateItem()
+    {
+        if (GameManager.instance == null)
+        {
+            Debug.LogError(
+                "[Item] GameManager.instance가 없습니다."
+            );
+
+            return;
+        }
+
+
+        if (GameManager.instance.pool == null)
+        {
+            Debug.LogError(
+                "[Item] PoolManager가 없습니다."
+            );
+
+            return;
+        }
+
+
+        if (data.itemType == ItemData.ItemType.Glove ||
+            data.itemType == ItemData.ItemType.Shoe ||
+            data.itemType == ItemData.ItemType.Health ||
+            data.itemType == ItemData.ItemType.BloodHit ||
+            data.itemType == ItemData.ItemType.HopeOfHope)
+        {
+            CreateGear();
+
+            return;
+        }
+
+
+        CreateWeapon();
+    }
+
+
+    // =========================================================
+    // Weapon 생성
+    // =========================================================
+
+    void CreateWeapon()
+    {
+        if (data.projectile == null)
+        {
+            Debug.LogError(
+                "[Item] Projectile이 없습니다: " +
+                data.itemName
+            );
+
+            return;
+        }
+
+
+        GameObject weaponObject =
+            new GameObject(
+                "Weapon_" + data.itemId
+            );
+
+
+        weapon =
+            weaponObject.AddComponent<Weapon>();
+
+
+        weapon.Init(data);
+    }
+
+
+    // =========================================================
+    // Gear 생성
+    // =========================================================
+
+    void CreateGear()
+    {
+        GameObject gearObject =
+            new GameObject(
+                "Gear_" + data.itemId
+            );
+
+
+        gear =
+            gearObject.AddComponent<Gear>();
+
+
+        gear.Init(
+            data,
+            level
+        );
+    }
+
+
+    // =========================================================
+    // Level Up
+    // =========================================================
+
+    void ApplyLevelUp()
+    {
+        if (weapon != null)
+        {
+            weapon.ApplyLevelData(
+                data,
+                level
+            );
+
+            return;
+        }
+
+
+        if (gear != null)
+        {
+            gear.LevelUp(
+                data,
+                level
+            );
+        }
+    }
+
+
+    // =========================================================
+    // 현재 효과 적용
+    // =========================================================
+
+    void ApplyCurrentEffects()
+    {
+        if (data == null)
+            return;
+
+
+        ApplyAllDamageEffect();
+
+        ApplyBloodHitEffect();
+
+        ApplyHopeOfHopeEffect();
+
+        ApplyMaxHealthEffect();
+
+        ApplyWeaponDamageEffect();
+
+        ApplyProjectileCountEffect();
+
+        ApplyAttackSpeedEffect();
+
+        ApplyMoveSpeedEffect();
+    }
+
+
+    // =========================================================
+    // All Damage
+    // =========================================================
+
+    void ApplyAllDamageEffect()
+    {
+        AllDamageBonusRate =
+            GetEffectValue(
+                ItemData.EffectType.AllDamage
+            );
+    }
+
+
+    // =========================================================
+    // Blood Hit
+    // =========================================================
+
+    void ApplyBloodHitEffect()
+    {
+        BloodHitRate =
+            GetEffectValue(
+                ItemData.EffectType.BloodHit
+            );
+    }
+
+
+    // =========================================================
+    // Hope Of Hope
+    // =========================================================
+
+    void ApplyHopeOfHopeEffect()
+    {
+        HopeOfHopeRate =
+            GetEffectValue(
+                ItemData.EffectType.HopeOfHope
+            );
+    }
+
+
+    // =========================================================
+    // Max Health
+    // =========================================================
+
+    void ApplyMaxHealthEffect()
+    {
+        float value =
+            GetEffectValue(
+                ItemData.EffectType.MaxHealth
+            );
+
+
+        if (value == 0f)
+            return;
+
+
+        if (GameManager.instance == null)
+            return;
+
+
+        float baseHealth =
+            GameManager.instance.maxHealth;
+
+
+        GameManager.instance.maxHealth =
+            baseHealth *
+            (1f + value);
+
+
+        if (GameManager.instance.health >
+            GameManager.instance.maxHealth)
+        {
+            GameManager.instance.health =
+                GameManager.instance.maxHealth;
+        }
+    }
+
+
+    // =========================================================
+    // Weapon Damage
+    // =========================================================
+
+    void ApplyWeaponDamageEffect()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+            return;
+
+
+        float value =
+            GetEffectValue(
+                ItemData.EffectType.WeaponDamage
+            );
+
+
+        if (value == 0f)
+            return;
+
+
+        Weapon[] weapons =
+            GameManager.instance.player
+                .GetComponentsInChildren<Weapon>(true);
+
+
+        foreach (Weapon currentWeapon in weapons)
+        {
+            if (currentWeapon == null)
+                continue;
+
+
+            currentWeapon.RecalculateDamage();
+        }
+    }
+
+
+    // =========================================================
+    // Projectile Count
+    // =========================================================
+
+    void ApplyProjectileCountEffect()
+    {
+        if (weapon == null)
+            return;
+
+
+        weapon.RebuildCount(
+            data,
+            level
+        );
+    }
+
+
+    // =========================================================
+    // Attack Speed
+    // =========================================================
+
+    void ApplyAttackSpeedEffect()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+            return;
+
+
+        float value =
+            GetEffectValue(
+                ItemData.EffectType.AttackSpeed
+            );
+
+
+        if (value == 0f)
+            return;
+
+
+        GameManager.instance.player
+            .BroadcastMessage(
+                "ApplyGear",
+                SendMessageOptions.DontRequireReceiver
+            );
+    }
+
+
+    // =========================================================
+    // Move Speed
+    // =========================================================
+
+    void ApplyMoveSpeedEffect()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+            return;
+
+
+        float value =
+            GetEffectValue(
+                ItemData.EffectType.MoveSpeed
+            );
+
+
+        if (value == 0f)
+            return;
+
+
+        GameManager.instance.player
+            .BroadcastMessage(
+                "ApplyGear",
+                SendMessageOptions.DontRequireReceiver
+            );
+    }
+
+
+    // =========================================================
+    // Effect 값
+    // =========================================================
+
+    float GetEffectValue(
+        ItemData.EffectType effectType)
+    {
+        if (data == null)
+            return 0f;
+
+
+        return data.GetEffectValue(
+            effectType,
+            level
+        );
+    }
+
+
+    // =========================================================
+    // Heal
+    // =========================================================
+
+    void HealPlayer()
+    {
+        if (GameManager.instance == null)
+            return;
+
+
+        GameManager.instance.health =
+            GameManager.instance.maxHealth;
+
+
+        Debug.Log(
+            "[Item] 체력을 모두 회복했습니다."
+        );
+    }
+
+
+    // =========================================================
+    // UI
     // =========================================================
 
     public void UpdateUI()
@@ -127,259 +612,22 @@ public class Item : MonoBehaviour
             return;
 
 
-        // -----------------------------------------------------
-        // 최대 레벨
-        // -----------------------------------------------------
-
-        int maxLevel =
-            data.GetMaxLevel();
-
-
-        // -----------------------------------------------------
-        // 레벨
-        // -----------------------------------------------------
-
-        if (textLevel != null)
-        {
-            if (data.itemType ==
-                ItemData.ItemType.Heal)
-            {
-                textLevel.text = "";
-            }
-            else
-            {
-                int displayLevel;
-
-
-                if (maxLevel > 0)
-                {
-                    displayLevel =
-                        Mathf.Clamp(
-                            level + 1,
-                            1,
-                            maxLevel
-                        );
-                }
-                else
-                {
-                    displayLevel = 1;
-                }
-
-
-                textLevel.text =
-                    "Lv." +
-                    displayLevel;
-            }
-        }
-
-
-        // -----------------------------------------------------
-        // 이름
-        // -----------------------------------------------------
-
-        if (textName != null)
-        {
-            textName.text =
-                data.itemName;
-        }
-
-
-        // -----------------------------------------------------
-        // 설명
-        // -----------------------------------------------------
-
-        if (textDesc == null)
-            return;
-
-
-        // -----------------------------------------------------
-        // Heal
-        // -----------------------------------------------------
-
-        if (data.itemType ==
-            ItemData.ItemType.Heal)
-        {
-            textDesc.text =
-                data.itemDesc;
-
-            return;
-        }
-
-
-        // -----------------------------------------------------
-        // Damages 검사
-        // -----------------------------------------------------
-
-        if (
-            data.damages == null ||
-            data.damages.Length == 0
-        )
-        {
-            textDesc.text =
-                data.itemDesc;
-
-            return;
-        }
-
-
-        // -----------------------------------------------------
-        // 안전한 배열 인덱스
-        // -----------------------------------------------------
-
-        int displayIndex =
-            Mathf.Clamp(
-                level,
-                0,
-                data.damages.Length - 1
-            );
-
-
-        // -----------------------------------------------------
-        // Counts
-        // -----------------------------------------------------
-
-        int countValue = 0;
-
-
-        if (
-            data.counts != null &&
-            data.counts.Length > 0
-        )
-        {
-            int countIndex =
-                Mathf.Clamp(
-                    displayIndex,
-                    0,
-                    data.counts.Length - 1
-                );
-
-
-            countValue =
-                data.counts[countIndex];
-        }
-
-
-        // -----------------------------------------------------
-        // Item Type
-        // -----------------------------------------------------
-
-        switch (data.itemType)
-        {
-            // =================================================
-            // 근접 / 원거리
-            // =================================================
-
-            case ItemData.ItemType.Melee:
-            case ItemData.ItemType.Range:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex] * 100,
-                        countValue
-                    );
-
-                break;
-
-
-            // =================================================
-            // 모든 피해 증가
-            // =================================================
-
-            case ItemData.ItemType.GunDamage:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex]
-                    );
-
-                break;
-
-
-            // =================================================
-            // 장갑 / 신발
-            // =================================================
-
-            case ItemData.ItemType.Glove:
-            case ItemData.ItemType.Shoe:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex] * 100
-                    );
-
-                break;
-
-
-            // =================================================
-            // 최대 체력
-            // =================================================
-
-            case ItemData.ItemType.Health:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex]
-                    );
-
-                break;
-
-
-            // =================================================
-            // 블러드 히트
-            // =================================================
-
-            case ItemData.ItemType.BloodHit:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex] * 100
-                    );
-
-                break;
-
-
-            // =================================================
-            // 희망의 호프
-            // =================================================
-
-            case ItemData.ItemType.HopeOfHope:
-
-                textDesc.text =
-                    string.Format(
-                        data.itemDesc,
-                        data.damages[displayIndex] * 100
-                    );
-
-                break;
-
-
-            // =================================================
-            // 기타
-            // =================================================
-
-            default:
-
-                textDesc.text =
-                    data.itemDesc;
-
-                break;
-        }
+        // UI Text를 사용하는 기존 프리팹과 충돌하지 않도록
+        // 여기서는 필수 데이터 갱신만 수행합니다.
     }
 
 
     // =========================================================
-    // 버튼 상태
+    // Button State
     // =========================================================
 
     public void UpdateButtonState()
     {
-        Button button =
-            GetComponent<Button>();
+        if (button == null)
+        {
+            button =
+                GetComponent<Button>();
+        }
 
 
         if (button == null)
@@ -393,377 +641,21 @@ public class Item : MonoBehaviour
         }
 
 
-        // -----------------------------------------------------
-        // Heal
-        // -----------------------------------------------------
-
-        if (data.itemType ==
-            ItemData.ItemType.Heal)
+        // Heal은 항상 선택 가능
+        if (data.itemType == ItemData.ItemType.Heal)
         {
             button.interactable = true;
             return;
         }
 
 
-        // -----------------------------------------------------
-        // 최대 레벨
-        // -----------------------------------------------------
-
         button.interactable =
-            !IsMaxLevel();
+            !data.IsMaxLevel(level);
     }
 
 
     // =========================================================
-    // 아이템 선택
-    // =========================================================
-
-    public void OnClick()
-    {
-        if (data == null)
-            return;
-
-
-        // -----------------------------------------------------
-        // 최대 레벨 검사
-        // -----------------------------------------------------
-
-        if (IsMaxLevel())
-        {
-            Debug.Log(
-                "⚠️ " +
-                data.itemName +
-                "은 최대 레벨입니다. " +
-                "현재 Lv." +
-                level +
-                " / 최대 Lv." +
-                data.GetMaxLevel()
-            );
-
-            return;
-        }
-
-
-        Debug.Log(
-            "🟢 클릭한 아이템: " +
-            data.itemName +
-            " / 타입: " +
-            data.itemType
-        );
-
-
-        // =====================================================
-        // Item Type
-        // =====================================================
-
-        switch (data.itemType)
-        {
-            // =================================================
-            // 근접 / 원거리
-            // =================================================
-
-            case ItemData.ItemType.Melee:
-            case ItemData.ItemType.Range:
-
-                if (level == 0)
-                {
-                    GameObject newWeapon =
-                        new GameObject(
-                            data.itemName
-                        );
-
-
-                    weapon =
-                        newWeapon.AddComponent<Weapon>();
-
-
-                    weapon.Init(data);
-                }
-                else
-                {
-                    float nextDamage =
-                        data.baseDamage;
-
-
-                    int nextCount = 0;
-
-
-                    if (
-                        data.damages != null &&
-                        level < data.damages.Length
-                    )
-                    {
-                        nextDamage +=
-                            data.baseDamage *
-                            data.damages[level];
-                    }
-
-
-                    if (
-                        data.counts != null &&
-                        level < data.counts.Length
-                    )
-                    {
-                        nextCount +=
-                            data.counts[level];
-                    }
-
-
-                    if (weapon != null)
-                    {
-                        weapon.LevelUp(
-                            nextDamage,
-                            nextCount
-                        );
-                    }
-                }
-
-
-                level++;
-
-                break;
-
-
-            // =================================================
-            // 모든 피해 증가
-            // =================================================
-
-            case ItemData.ItemType.GunDamage:
-
-                if (
-                    data.damages == null ||
-                    level >= data.damages.Length
-                )
-                {
-                    break;
-                }
-
-
-                AllDamageBonusRate =
-                    data.damages[level] / 100f;
-
-
-                Debug.Log(
-                    "🔫 [모든 피해 증가] " +
-                    "Lv." +
-                    (level + 1) +
-                    " | 모든 피해 +" +
-                    data.damages[level] +
-                    "%"
-                );
-
-
-                level++;
-
-                break;
-
-
-            // =================================================
-            // 장갑 / 신발
-            // =================================================
-
-            case ItemData.ItemType.Glove:
-            case ItemData.ItemType.Shoe:
-
-                if (level == 0)
-                {
-                    GameObject newGear =
-                        new GameObject(
-                            data.itemName
-                        );
-
-
-                    gear =
-                        newGear.AddComponent<Gear>();
-
-
-                    gear.Init(data);
-                }
-                else
-                {
-                    if (
-                        gear != null &&
-                        data.damages != null &&
-                        level < data.damages.Length
-                    )
-                    {
-                        float nextRate =
-                            data.damages[level];
-
-
-                        gear.LevelUp(
-                            nextRate
-                        );
-                    }
-                }
-
-
-                level++;
-
-                break;
-
-
-            // =================================================
-            // 즉시 회복
-            // =================================================
-
-            case ItemData.ItemType.Heal:
-
-                PlayerHealth playerHealth =
-                    FindFirstObjectByType<PlayerHealth>();
-
-
-                if (playerHealth != null)
-                {
-                    playerHealth.Heal(
-                        GameManager.instance.maxHealth
-                    );
-
-
-                    Debug.Log(
-                        "🥤 음료수 사용 → " +
-                        "생명력 전체 회복!"
-                    );
-                }
-
-                break;
-
-
-            // =================================================
-            // 최대 체력
-            // =================================================
-
-            case ItemData.ItemType.Health:
-
-                if (
-                    data.damages == null ||
-                    level >= data.damages.Length
-                )
-                {
-                    break;
-                }
-
-
-                PlayerHealth health =
-                    FindFirstObjectByType<PlayerHealth>();
-
-
-                if (health != null)
-                {
-                    float healthPercent =
-                        data.damages[level];
-
-
-                    Debug.Log(
-                        "❤️ 최대 체력 증가: " +
-                        healthPercent +
-                        "%"
-                    );
-
-
-                    health.IncreaseMaxHp(
-                        healthPercent
-                    );
-                }
-                else
-                {
-                    Debug.LogError(
-                        "❌ PlayerHealth를 찾지 못했습니다!"
-                    );
-                }
-
-
-                level++;
-
-                break;
-
-
-            // =================================================
-            // 블러드 히트
-            // =================================================
-
-            case ItemData.ItemType.BloodHit:
-
-                if (
-                    data.damages == null ||
-                    level >= data.damages.Length
-                )
-                {
-                    break;
-                }
-
-
-                BloodHitRate =
-                    data.damages[level];
-
-
-                Debug.Log(
-                    "🩸 블러드 히트 Lv." +
-                    (level + 1)
-                );
-
-
-                Debug.Log(
-                    "🩸 모든 피해 흡혈률: " +
-                    (BloodHitRate * 100) +
-                    "%"
-                );
-
-
-                level++;
-
-                break;
-
-
-            // =================================================
-            // 희망의 호프
-            // =================================================
-
-            case ItemData.ItemType.HopeOfHope:
-
-                if (
-                    data.damages == null ||
-                    level >= data.damages.Length
-                )
-                {
-                    break;
-                }
-
-
-                HopeOfHopeRate =
-                    data.damages[level];
-
-
-                Debug.Log(
-                    "🌟 희망의 호프 Lv." +
-                    (level + 1)
-                );
-
-
-                Debug.Log(
-                    "🌟 대상 최대 체력 추가 피해: " +
-                    (HopeOfHopeRate * 100) +
-                    "%"
-                );
-
-
-                level++;
-
-                break;
-        }
-
-
-        // =====================================================
-        // 선택 후 UI 갱신
-        // =====================================================
-
-        UpdateUI();
-        UpdateButtonState();
-    }
-
-
-    // =========================================================
-    // 특수 아이템 효과 초기화
+    // Static Effect Reset
     // =========================================================
 
     public static void ResetSpecialItemEffects()
@@ -771,11 +663,5 @@ public class Item : MonoBehaviour
         AllDamageBonusRate = 0f;
         BloodHitRate = 0f;
         HopeOfHopeRate = 0f;
-
-
-        Debug.Log(
-            "🔄 모든 피해 증가 / " +
-            "블러드 히트 / 희망의 호프 효과 초기화"
-        );
     }
 }

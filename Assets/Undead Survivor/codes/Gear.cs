@@ -2,77 +2,292 @@
 
 public class Gear : MonoBehaviour
 {
+    // =========================================================
+    // Data
+    // =========================================================
+
     public ItemData.ItemType type;
+
     public float rate;
 
-    public void Init(ItemData data)
+
+    // =========================================================
+    // Current Level
+    // =========================================================
+
+    int level = 1;
+
+
+    // =========================================================
+    // Initialize
+    // =========================================================
+
+    public void Init(
+        ItemData data,
+        int startLevel = 1)
     {
-        Debug.Log("④ Gear.Init 시작");
+        if (data == null)
+        {
+            Debug.LogError(
+                "[Gear] ItemData가 null입니다."
+            );
 
-        //Basic Set
-        name = "Gear " + data.itemId;
-        transform.parent = GameManager.instance.player.transform;
-        transform.localPosition = Vector3.zero;
+            return;
+        }
 
-        // Property Set
-        type = data.itemType;
 
-        // Property Set
-        type = data.itemType;
-        rate = data.damages[0];
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+        {
+            Debug.LogError(
+                "[Gear] Player를 찾을 수 없습니다."
+            );
 
-        Debug.Log($"⑤ Gear Type = {type}, Rate = {rate}");
+            return;
+        }
+
+
+        name =
+            "Gear_" +
+            data.itemId;
+
+
+        transform.SetParent(
+            GameManager.instance.player.transform
+        );
+
+
+        transform.localPosition =
+            Vector3.zero;
+
+
+        transform.localRotation =
+            Quaternion.identity;
+
+
+        type =
+            data.itemType;
+
+
+        level =
+            Mathf.Max(
+                1,
+                startLevel
+            );
+
+
+        UpdateRate(
+            data,
+            level
+        );
+
 
         ApplyGear();
-
-        Debug.Log("⑥ ApplyGear 완료");
     }
 
-    public void LevelUp(float rate)
+
+    // =========================================================
+    // Level Up
+    // =========================================================
+
+    public void LevelUp(
+        ItemData data,
+        int newLevel)
     {
-        this.rate = rate;
+        if (data == null)
+            return;
+
+
+        level =
+            Mathf.Max(
+                1,
+                newLevel
+            );
+
+
+        UpdateRate(
+            data,
+            level
+        );
+
+
         ApplyGear();
     }
 
-    void ApplyGear()
-    {
-        Debug.Log($"⑦ ApplyGear 실행 / Type = {type}");
 
+    // =========================================================
+    // Rate
+    // =========================================================
+
+    void UpdateRate(
+        ItemData data,
+        int currentLevel)
+    {
+        rate = 0f;
+
+
+        // -----------------------------------------------------
+        // 우선 Effect를 사용
+        // -----------------------------------------------------
+
+        float effectRate = 0f;
+
+
+        switch (data.itemType)
+        {
+            case ItemData.ItemType.Glove:
+
+                effectRate =
+                    data.GetEffectValue(
+                        ItemData.EffectType.AttackSpeed,
+                        currentLevel
+                    );
+
+                break;
+
+
+            case ItemData.ItemType.Shoe:
+
+                effectRate =
+                    data.GetEffectValue(
+                        ItemData.EffectType.MoveSpeed,
+                        currentLevel
+                    );
+
+                break;
+        }
+
+
+        if (effectRate != 0f)
+        {
+            rate =
+                effectRate;
+
+            return;
+        }
+
+
+        // -----------------------------------------------------
+        // Effect가 없을 경우 damages 사용
+        // -----------------------------------------------------
+
+        rate =
+            data.GetDamage(
+                currentLevel
+            );
+    }
+
+
+    // =========================================================
+    // Apply
+    // =========================================================
+
+    public void ApplyGear()
+    {
         switch (type)
         {
             case ItemData.ItemType.Glove:
+
                 RateUp();
+
                 break;
+
+
             case ItemData.ItemType.Shoe:
+
                 SpeedUp();
+
                 break;
         }
     }
 
+
+    // =========================================================
+    // Glove
+    // =========================================================
+
     void RateUp()
     {
-        Weapon[] weapons = transform.parent.GetComponentsInChildren<Weapon>();
+        if (transform.parent == null)
+            return;
+
+
+        Weapon[] weapons =
+            transform.parent
+                .GetComponentsInChildren<Weapon>(
+                    true
+                );
+
 
         foreach (Weapon weapon in weapons)
         {
+            if (weapon == null)
+                continue;
+
+
             switch (weapon.id)
             {
                 case 0:
                 case 5:
-                    float speed = 150 * Character.WeaponSpeed;
-                    weapon.speed = speed + (speed * rate);
+
+                    float rotateSpeed =
+                        150f *
+                        Character.WeaponSpeed;
+
+
+                    weapon.speed =
+                        rotateSpeed +
+                        rotateSpeed * rate;
+
                     break;
+
+
                 default:
-                    speed = 0.5f * Character.WeaponRate;
-                    weapon.speed = speed * (1f - rate);
+
+                    float fireRate =
+                        0.5f *
+                        Character.WeaponRate;
+
+
+                    float finalRate =
+                        1f -
+                        rate;
+
+
+                    if (finalRate < 0.05f)
+                        finalRate = 0.05f;
+
+
+                    weapon.speed =
+                        fireRate *
+                        finalRate;
+
                     break;
             }
         }
     }
 
+
+    // =========================================================
+    // Shoe
+    // =========================================================
+
     void SpeedUp()
     {
-        float speed = 3 * Character.Speed;
-        GameManager.instance.player.speed = speed + speed * rate;
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+        {
+            return;
+        }
+
+
+        float speed =
+            3f *
+            Character.Speed;
+
+
+        GameManager.instance.player.speed =
+            speed +
+            speed * rate;
     }
 }
