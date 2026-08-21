@@ -193,8 +193,23 @@ MonoBehaviour:
   lavaRadius: 3
   slowDebuffAmount: 0.5
   debuffDuration: 2
-  slashPrefab: {fileID: 1289847228260645765, guid: 1a2e306f8e9c3fa478b38661e4e5d204, type: 3}
-  skillPrefab: {fileID: 4191518148838109771, guid: 717b48615a33b0841bb35cf861269add, type: 3}
+  buffSkillPrefab: {fileID: 4191518148838109771, guid: 717b48615a33b0841bb35cf861269add, type: 3}
+  useBuffSkill: 1
+  buffSkillDuration: 12
+  buffSkillRange: 24
+  buffDamagePerSecond: 50
+  buffHealPerSecond: 10000
+  buffTickInterval: 0.5
+  buffSkillCooldown: 5
+  slashPrefab: {fileID: 3826504499123057184, guid: 71a4dfa4631700449867b07254c8a24e, type: 3}
+  phase1SlashDelay: 1
+  phase1ProjectilePrefab: {fileID: 0}
+  phase1ShotInterval: 0.25
+  phase1SlashCount: 1
+  phase1SlashSpeed: 7
+  phase1SpawnDistance: 0
+  phase1SlashDuration: 5
+  skillPrefab: {fileID: 1289847228260645765, guid: 1a2e306f8e9c3fa478b38661e4e5d204, type: 3}
   slashRadius: 12
   slashInitialDamage: 50
   slashDamagePerSecond: 10
@@ -203,11 +218,31 @@ MonoBehaviour:
   phase2Form: {fileID: 288964229382871414, guid: c1bdcee8fd0bc3c4bb947286176d929b, type: 3}
   phase3Form: {fileID: 4326878561948243228, guid: 93eef0a4915c0964284e7bd3aea7c1eb, type: 3}
   phase2DefenseBonus: 100
-  phase2BuffMultiplier: 1
   phase3DefenseBonus: 200
+  phase2BuffMultiplier: 1
   phase3BuffMultiplier: 2
-  phase2ItemId: 7
-  phase3ItemId: 8
+  phase2ProjectilePrefab: {fileID: 3826504499123057184, guid: 71a4dfa4631700449867b07254c8a24e, type: 3}
+  phase2ProjectileDuration: 5
+  phase2ShotInterval: 0.25
+  phase2SlashCount: 4
+  phase2SlashSpeed: 7
+  phase2SpawnDistance: 2
+  phase2ProjectileCooldown: 6
+  phase3ProjectilePrefab: {fileID: 3826504499123057184, guid: 71a4dfa4631700449867b07254c8a24e, type: 3}
+  phase3ShotInterval: 0.2
+  phase3SlashCount: 12
+  phase3SlashSpeed: 4
+  phase3SpawnDistance: 0
+  usePhase3ExtraSlash: 1
+  phase3ExtraSlashPrefab: {fileID: 1289847228260645765, guid: 1a2e306f8e9c3fa478b38661e4e5d204, type: 3}
+  phase3ExtraSlashDelay: 1
+  phase3ExtraProjectilePrefab: {fileID: 3826504499123057184, guid: 71a4dfa4631700449867b07254c8a24e, type: 3}
+  phase3ExtraProjectileDuration: 5
+  phase3ExtraShotInterval: 0.25
+  phase3ExtraSlashCount: 4
+  phase3ExtraSlashSpeed: 7
+  phase3ExtraSpawnDistance: 2
+  phase3ExtraSlashCooldown: 2
   awakenStatMultiplier: 1.5
   minionPrefab: {fileID: 0}
   spawnPoints: []
