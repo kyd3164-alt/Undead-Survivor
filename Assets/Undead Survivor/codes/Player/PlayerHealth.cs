@@ -23,6 +23,12 @@ public class PlayerHealth : MonoBehaviour
 
     private void Start()
     {
+        if (GameManager.instance == null)
+        {
+            Debug.LogError("❌ PlayerHealth: GameManager.instance가 없습니다!");
+            return;
+        }
+
         if (GameManager.instance.maxHealth <= 0)
         {
             GameManager.instance.maxHealth = baseMaxHealth;
@@ -37,21 +43,30 @@ public class PlayerHealth : MonoBehaviour
         UpdateHpUI();
     }
 
-    // 💥 일반 적(Enemy) 등에게 데미지를 입을 때 호출하는 함수
     public void TakeDamage(float damage)
     {
-        if (isDead) return;
+        if (isDead)
+            return;
+
+        if (GameManager.instance == null)
+            return;
 
         GameManager.instance.health -= damage;
-        Debug.Log($"💥 [일반 적 피격] -{damage:F1} 데미지 | 남은 HP: {GameManager.instance.health:F1}");
+
+        Debug.Log(
+            $"💥 [일반 적 피격] -{damage:F1} 데미지 | 남은 HP: {GameManager.instance.health:F1}"
+        );
 
         CheckIsDead();
     }
 
-    // 보스 몸 안에서 받는 데미지 처리
     public void TakeBossBodyDamage(float baseDamage)
     {
-        if (isDead) return;
+        if (isDead)
+            return;
+
+        if (GameManager.instance == null)
+            return;
 
         if (Time.time - lastBossDamageTime < bossDamageInterval)
             return;
@@ -63,14 +78,20 @@ public class PlayerHealth : MonoBehaviour
         if (isOnFire)
         {
             finalDamage *= fireDamageMultiplier;
-            Debug.Log($"🔥 [{fireDamageMultiplier}배 폭딜!] {finalDamage} 데미지 받음");
+
+            Debug.Log(
+                $"🔥 [{fireDamageMultiplier}배 폭딜!] {finalDamage} 데미지 받음"
+            );
         }
         else
         {
-            Debug.Log($"💥 [보스 몸체 딜] {finalDamage} 데미지 받음");
+            Debug.Log(
+                $"💥 [보스 몸체 딜] {finalDamage} 데미지 받음"
+            );
         }
 
         GameManager.instance.health -= finalDamage;
+
         CheckIsDead();
 
         ApplyBurnDebuff(burnDuration, burnTickDamage);
@@ -78,43 +99,77 @@ public class PlayerHealth : MonoBehaviour
 
     public void ApplyBurnDebuff(float duration, float tickDamage)
     {
+        if (isDead)
+            return;
+
         isOnFire = true;
-        if (burnCoroutine != null) StopCoroutine(burnCoroutine);
-        burnCoroutine = StartCoroutine(BurnDebuffRoutine(duration, tickDamage));
+
+        if (burnCoroutine != null)
+            StopCoroutine(burnCoroutine);
+
+        burnCoroutine = StartCoroutine(
+            BurnDebuffRoutine(duration, tickDamage)
+        );
     }
 
     private IEnumerator BurnDebuffRoutine(float duration, float tickDamage)
     {
         float timer = 0f;
+
         while (timer < duration && !isDead)
         {
             yield return new WaitForSeconds(1.0f);
+
+            if (GameManager.instance == null)
+                yield break;
+
             GameManager.instance.health -= tickDamage;
+
             timer += 1.0f;
-            Debug.Log($"🔥 [화염 지속 도트딜] -{tickDamage} (남은 HP: {GameManager.instance.health})");
+
+            Debug.Log(
+                $"🔥 [화염 지속 도트딜] -{tickDamage} " +
+                $"(남은 HP: {GameManager.instance.health})"
+            );
 
             CheckIsDead();
         }
 
         isOnFire = false;
+        burnCoroutine = null;
+
         Debug.Log("불길이 꺼졌습니다.");
     }
 
-    void UpdateHpUI()
+    private void UpdateHpUI()
     {
-        if (hpSlider != null && GameManager.instance.maxHealth > 0)
-        {
-            hpSlider.value = GameManager.instance.health / GameManager.instance.maxHealth;
-        }
+        if (GameManager.instance == null)
+            return;
+
+        if (hpSlider == null)
+            return;
+
+        if (GameManager.instance.maxHealth <= 0)
+            return;
+
+        hpSlider.value =
+            GameManager.instance.health /
+            GameManager.instance.maxHealth;
     }
 
     private void CheckIsDead()
     {
+        if (GameManager.instance == null)
+            return;
+
         if (GameManager.instance.health <= 0 && !isDead)
         {
             GameManager.instance.health = 0;
+
             isDead = true;
+
             UpdateHpUI();
+
             Die();
         }
     }
@@ -123,33 +178,39 @@ public class PlayerHealth : MonoBehaviour
     {
         Debug.Log("💀 플레이어 사망!");
 
-        if (GameManager.instance != null)
-        {
-            Player playerScript = GetComponent<Player>();
-            if (playerScript != null)
-            {
-                for (int index = 2; index < transform.childCount; index++)
-                {
-                    transform.GetChild(index).gameObject.SetActive(false);
-                }
+        if (GameManager.instance == null)
+            return;
 
-                Animator anim = GetComponent<Animator>();
-                if (anim != null) anim.SetTrigger("Dead");
+        Player playerScript = GetComponent<Player>();
+
+        if (playerScript != null)
+        {
+            for (int index = 2; index < transform.childCount; index++)
+            {
+                transform.GetChild(index).gameObject.SetActive(false);
             }
 
-            GameManager.instance.GameOver();
+            Animator anim = GetComponent<Animator>();
+
+            if (anim != null)
+                anim.SetTrigger("Dead");
         }
+
+        GameManager.instance.GameOver();
     }
 
     public void IncreaseMaxHp(float percent)
     {
-        // 항상 기본 최대 HP 100을 기준으로 증가량 계산
-        float increaseAmount = baseMaxHealth * (percent / 100f);
+        if (GameManager.instance == null)
+            return;
+
+        float increaseAmount =
+            baseMaxHealth * (percent / 100f);
 
         GameManager.instance.maxHealth += increaseAmount;
         GameManager.instance.health += increaseAmount;
 
-        Debug.Log($"❤️ HP 증가!");
+        Debug.Log("❤️ HP 증가!");
         Debug.Log($"증가율: {percent}%");
         Debug.Log($"증가량: +{increaseAmount}");
         Debug.Log($"현재 HP: {GameManager.instance.health}");
@@ -160,11 +221,21 @@ public class PlayerHealth : MonoBehaviour
 
     public void Heal(float amount)
     {
-        if (isDead) return;
+        if (isDead)
+            return;
+
+        if (GameManager.instance == null)
+            return;
 
         GameManager.instance.health += amount;
-        if (GameManager.instance.health > GameManager.instance.maxHealth)
-            GameManager.instance.health = GameManager.instance.maxHealth;
+
+        if (GameManager.instance.health >
+            GameManager.instance.maxHealth)
+        {
+            GameManager.instance.health =
+                GameManager.instance.maxHealth;
+        }
+
         UpdateHpUI();
     }
 }

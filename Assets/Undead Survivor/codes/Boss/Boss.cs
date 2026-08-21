@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 
 public class Boss : MonoBehaviour
 {
@@ -200,11 +201,35 @@ public class Boss : MonoBehaviour
 
     [Header("--- Boss2 폼체인지 ---")]
 
-    [Tooltip("Boss2 2페이지에서 켜지는 폼")]
+    [Tooltip("Boss2 2페이지에서 생성할 폼 프리팹")]
     public GameObject phase2Form;
 
-    [Tooltip("Boss2 3페이지에서 켜지는 분노 폼")]
+    [Tooltip("Boss2 3페이지에서 생성할 분노 폼 프리팹")]
     public GameObject phase3Form;
+
+    // 실제 생성된 폼
+    private GameObject activePhaseForm;
+
+
+    // =========================================================
+    // Boss2 1페이지 보상
+    // =========================================================
+
+    [Header("========================================")]
+    [Header("       [Boss2 1페이지 보상]              ")]
+    [Header("========================================")]
+
+    [Tooltip("1페이지 사망 시 플레이어 레벨 증가량")]
+    public int phase1RewardLevel = 1;
+
+    [Tooltip("1페이지 사망 시 보상 선택 횟수")]
+    public int phase1RewardChoiceCount = 1;
+
+    [Tooltip("1페이지 사망 시 BloodHit 잠금해제")]
+    public bool unlockBloodHitOnPhase1 = true;
+
+    [Tooltip("BloodHit 잠금해제를 LevelUp UI에서 연결")]
+    public UnityEvent onBoss2Phase1UnlockBloodHit;
 
 
     // =========================================================
@@ -412,13 +437,10 @@ public class Boss : MonoBehaviour
 
         // =====================================================
         // Boss2 폼 초기화
+        // 실제 프리팹은 아직 생성하지 않는다.
         // =====================================================
 
-        if (phase2Form != null)
-            phase2Form.SetActive(false);
-
-        if (phase3Form != null)
-            phase3Form.SetActive(false);
+        DestroyActivePhaseForm();
 
 
         // =====================================================
@@ -427,8 +449,7 @@ public class Boss : MonoBehaviour
 
         if (bossType == BossType.Boss2)
         {
-            if (spriteRenderer != null)
-                spriteRenderer.enabled = true;
+            SetBoss2BodyVisible(true);
         }
 
 
@@ -470,8 +491,7 @@ public class Boss : MonoBehaviour
 
 
     // =========================================================
-    // ★ 최대 체력 반환
-    // Bullet.cs / 외부 스킬에서 사용
+    // 최대 체력 반환
     // =========================================================
 
     public float GetMaxHealth()
@@ -481,8 +501,7 @@ public class Boss : MonoBehaviour
 
 
     // =========================================================
-    // ★ Aura 회복
-    // Boss2AuraSkill.cs에서 사용
+    // Aura 회복
     // =========================================================
 
     public void HealFromAura(float amount)
@@ -587,6 +606,8 @@ public class Boss : MonoBehaviour
     {
         StopAllBoss2Effects();
 
+        DestroyActivePhaseForm();
+
         GameObject sliderObj =
             GameObject.Find("Boss Health Bar");
 
@@ -649,7 +670,6 @@ public class Boss : MonoBehaviour
         }
 
 
-        // Boss2 1페이지
         if (bossType == BossType.Boss2 &&
             boss2Phase == 1)
         {
@@ -786,6 +806,9 @@ public class Boss : MonoBehaviour
             spriteRenderer.flipX =
                 dir.x < 0f;
         }
+
+        // 폼도 항상 Boss Transform의 자식이므로
+        // Boss와 함께 이동한다.
     }
 
 
@@ -1178,9 +1201,10 @@ public class Boss : MonoBehaviour
 
         if (bossType == BossType.Boss2)
         {
-            SetBoss2BodyVisible(
-                boss2Phase == 1
-            );
+            if (boss2Phase == 1)
+                SetBoss2BodyVisible(true);
+            else
+                SetBoss2BodyVisible(false);
 
 
             // ================================================
@@ -1312,6 +1336,12 @@ public class Boss : MonoBehaviour
                 transform
             );
 
+        activeBuffSkill.transform.localPosition =
+            Vector3.zero;
+
+        activeBuffSkill.transform.localRotation =
+            Quaternion.identity;
+
         float elapsed = 0f;
 
         float safeTick =
@@ -1327,17 +1357,12 @@ public class Boss : MonoBehaviour
 
         while (currentState != BossState.Dead)
         {
-            // -------------------------------------------------
-            // 2 / 3페이지 상시 버프
-            // -------------------------------------------------
-
             if (boss2PersistentBuff)
             {
-                // 지속시간 제한 없음
+                // 2 / 3페이지 무제한
             }
             else
             {
-                // 1페이지
                 if (elapsed >= buffSkillDuration)
                     break;
             }
@@ -1345,7 +1370,6 @@ public class Boss : MonoBehaviour
 
             // -------------------------------------------------
             // 보스 회복
-            // ★ 초당 회복량을 Tick 간격에 맞게 계산
             // -------------------------------------------------
 
             if (buffHealPerSecond > 0f)
@@ -1407,10 +1431,6 @@ public class Boss : MonoBehaviour
             }
 
 
-            // -------------------------------------------------
-            // 대기
-            // -------------------------------------------------
-
             yield return
                 new WaitForSeconds(
                     safeTick
@@ -1419,10 +1439,6 @@ public class Boss : MonoBehaviour
             elapsed += safeTick;
         }
 
-
-        // =====================================================
-        // 버프 프리팹 삭제
-        // =====================================================
 
         DestroyActiveBuffSkill();
 
@@ -1458,6 +1474,15 @@ public class Boss : MonoBehaviour
     {
         boss2PersistentBuff = false;
 
+        if (buffSkillRoutine != null)
+        {
+            StopCoroutine(
+                buffSkillRoutine
+            );
+
+            buffSkillRoutine = null;
+        }
+
         DestroyActiveBuffSkill();
 
         if (activeSlashObject != null)
@@ -1491,26 +1516,14 @@ public class Boss : MonoBehaviour
             spriteRenderer.enabled = true;
 
 
-        // =====================================================
-        // 1페이지 버프
-        // =====================================================
-
         boss2PersistentBuff = false;
 
         StartBoss2BuffSkill();
 
 
-        // =====================================================
-        // 슬래시 애니메이션
-        // =====================================================
-
         if (animator != null)
             animator.SetTrigger("doSlash");
 
-
-        // =====================================================
-        // 슬래시 생성
-        // =====================================================
 
         if (slashPrefab != null)
         {
@@ -1522,15 +1535,14 @@ public class Boss : MonoBehaviour
                     transform
                 );
 
+            activeSlashObject.transform.localPosition =
+                Vector3.zero;
+
             DisableOldSlashSkill(
                 activeSlashObject
             );
         }
 
-
-        // =====================================================
-        // 참격 시작 딜레이
-        // =====================================================
 
         if (phase1SlashDelay > 0f)
         {
@@ -1540,10 +1552,6 @@ public class Boss : MonoBehaviour
                 );
         }
 
-
-        // =====================================================
-        // 참격 발사
-        // =====================================================
 
         if (phase1ProjectilePrefab != null)
         {
@@ -1560,20 +1568,12 @@ public class Boss : MonoBehaviour
         }
 
 
-        // =====================================================
-        // 주변 피해
-        // =====================================================
-
         ApplySlashInitialDamage();
 
         StartCoroutine(
             SlashDamageOverTime()
         );
 
-
-        // =====================================================
-        // 슬래시 지속시간
-        // =====================================================
 
         if (phase1SlashDuration > 0f)
         {
@@ -1584,10 +1584,6 @@ public class Boss : MonoBehaviour
         }
 
 
-        // =====================================================
-        // 슬래시 삭제
-        // =====================================================
-
         if (activeSlashObject != null)
         {
             Destroy(
@@ -1597,10 +1593,6 @@ public class Boss : MonoBehaviour
             activeSlashObject = null;
         }
 
-
-        // =====================================================
-        // 1페이지 버프가 끝난 뒤 다음 사용 대기
-        // =====================================================
 
         if (buffSkillRoutine == null &&
             useBuffSkill &&
@@ -1624,19 +1616,10 @@ public class Boss : MonoBehaviour
     {
         SetBoss2BodyVisible(false);
 
-
-        // =====================================================
-        // 2페이지 버프 상시 유지
-        // =====================================================
-
         boss2PersistentBuff = true;
 
         StartBoss2BuffSkill();
 
-
-        // =====================================================
-        // 참격 지속시간 동안 발사
-        // =====================================================
 
         yield return
             StartCoroutine(
@@ -1650,10 +1633,6 @@ public class Boss : MonoBehaviour
                 )
             );
 
-
-        // =====================================================
-        // 지속시간 종료 후 쿨타임
-        // =====================================================
 
         if (phase2ProjectileCooldown > 0f)
         {
@@ -1674,19 +1653,10 @@ public class Boss : MonoBehaviour
     {
         SetBoss2BodyVisible(false);
 
-
-        // =====================================================
-        // 3페이지 버프 상시 유지
-        // =====================================================
-
         boss2PersistentBuff = true;
 
         StartBoss2BuffSkill();
 
-
-        // =====================================================
-        // 추가 슬래시 패턴
-        // =====================================================
 
         if (usePhase3ExtraSlash &&
             phase3ExtraSlashPrefab != null &&
@@ -1702,10 +1672,6 @@ public class Boss : MonoBehaviour
             );
         }
 
-
-        // =====================================================
-        // 기본 참격
-        // =====================================================
 
         yield return
             StartCoroutine(
@@ -1723,7 +1689,6 @@ public class Boss : MonoBehaviour
 
     // =========================================================
     // 3페이지 추가 슬래시
-    // 슬래시 → 딜레이 → 참격 지속
     // =========================================================
 
     IEnumerator Boss2Phase3ExtraSlashRoutine()
@@ -1731,10 +1696,6 @@ public class Boss : MonoBehaviour
         if (phase3ExtraSlashPrefab == null)
             yield break;
 
-
-        // =====================================================
-        // 슬래시 생성
-        // =====================================================
 
         GameObject extraSlash =
             Instantiate(
@@ -1744,14 +1705,13 @@ public class Boss : MonoBehaviour
                 transform
             );
 
+        extraSlash.transform.localPosition =
+            Vector3.zero;
+
         DisableOldSlashSkill(
             extraSlash
         );
 
-
-        // =====================================================
-        // 딜레이
-        // =====================================================
 
         if (phase3ExtraSlashDelay > 0f)
         {
@@ -1761,10 +1721,6 @@ public class Boss : MonoBehaviour
                 );
         }
 
-
-        // =====================================================
-        // 참격 발사
-        // =====================================================
 
         yield return
             StartCoroutine(
@@ -1778,10 +1734,6 @@ public class Boss : MonoBehaviour
                 )
             );
 
-
-        // =====================================================
-        // 슬래시 삭제
-        // =====================================================
 
         if (extraSlash != null)
             Destroy(extraSlash);
@@ -1962,9 +1914,117 @@ public class Boss : MonoBehaviour
         if (bossType != BossType.Boss2)
             return;
 
-
         if (spriteRenderer != null)
             spriteRenderer.enabled = visible;
+    }
+
+
+    // =========================================================
+    // ★ Boss2 폼 생성
+    // =========================================================
+
+    void SpawnBoss2Form(GameObject formPrefab)
+    {
+        if (bossType != BossType.Boss2)
+            return;
+
+        if (formPrefab == null)
+        {
+            Debug.LogWarning(
+                "[Boss2 폼] 생성할 폼 프리팹이 지정되지 않았습니다."
+            );
+
+            return;
+        }
+
+
+        // 기존 폼 제거
+        DestroyActivePhaseForm();
+
+
+        // =====================================================
+        // 실제 프리팹 Instantiate
+        // =====================================================
+
+        activePhaseForm =
+            Instantiate(
+                formPrefab,
+                transform.position,
+                Quaternion.identity,
+                transform
+            );
+
+
+        // =====================================================
+        // Boss 몸 중심에 정확하게 부착
+        // =====================================================
+
+        activePhaseForm.transform.localPosition =
+            Vector3.zero;
+
+        activePhaseForm.transform.localRotation =
+            Quaternion.identity;
+
+        activePhaseForm.transform.localScale =
+            Vector3.one;
+
+
+        // =====================================================
+        // 폼 내부 SpriteRenderer 전부 활성화
+        // =====================================================
+
+        SpriteRenderer[] formRenderers =
+            activePhaseForm.GetComponentsInChildren<
+                SpriteRenderer>(
+                true
+            );
+
+        int rendererCount = 0;
+
+        foreach (SpriteRenderer renderer in formRenderers)
+        {
+            if (renderer == null)
+                continue;
+
+            renderer.enabled = true;
+
+            renderer.color = Color.white;
+
+            rendererCount++;
+        }
+
+
+        Debug.Log(
+            $"<color=cyan>" +
+            $"[Boss2 폼 생성 성공]" +
+            $"</color> " +
+            $"프리팹: {formPrefab.name} | " +
+            $"생성 오브젝트: {activePhaseForm.name} | " +
+            $"부모: {activePhaseForm.transform.parent.name} | " +
+            $"LocalPosition: {activePhaseForm.transform.localPosition} | " +
+            $"SpriteRenderer: {rendererCount}개 활성화"
+        );
+    }
+
+
+    // =========================================================
+    // ★ 현재 폼 제거
+    // =========================================================
+
+    void DestroyActivePhaseForm()
+    {
+        if (activePhaseForm != null)
+        {
+            Debug.Log(
+                $"[Boss2 폼 제거] {activePhaseForm.name}"
+            );
+
+            Destroy(
+                activePhaseForm
+            );
+
+            activePhaseForm = null;
+        }
     }
 
 
@@ -2114,14 +2174,10 @@ public class Boss : MonoBehaviour
 
 
         // =====================================================
-        // 모든 폼 OFF
+        // 기존 폼 제거
         // =====================================================
 
-        if (phase2Form != null)
-            phase2Form.SetActive(false);
-
-        if (phase3Form != null)
-            phase3Form.SetActive(false);
+        DestroyActivePhaseForm();
 
 
         // =====================================================
@@ -2153,22 +2209,11 @@ public class Boss : MonoBehaviour
         {
             SetBoss2BodyVisible(false);
 
-            if (phase2Form != null)
-            {
-                phase2Form.SetActive(true);
 
-                Debug.Log(
-                    "<color=yellow>" +
-                    "[Boss2]</color> " +
-                    "2페이지 폼 활성화!"
-                );
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "Boss2 Phase 2 Form이 지정되지 않았습니다."
-                );
-            }
+            // ★ 실제 프리팹 생성
+            SpawnBoss2Form(
+                phase2Form
+            );
 
 
             boss2PersistentBuff = true;
@@ -2187,22 +2232,11 @@ public class Boss : MonoBehaviour
         {
             SetBoss2BodyVisible(false);
 
-            if (phase3Form != null)
-            {
-                phase3Form.SetActive(true);
 
-                Debug.Log(
-                    "<color=red>" +
-                    "[Boss2]</color> " +
-                    "3페이지 분노 폼 활성화!"
-                );
-            }
-            else
-            {
-                Debug.LogWarning(
-                    "Boss2 Phase 3 Rage Form이 지정되지 않았습니다."
-                );
-            }
+            // ★ 실제 프리팹 생성
+            SpawnBoss2Form(
+                phase3Form
+            );
 
 
             boss2PersistentBuff = true;
@@ -2266,6 +2300,93 @@ public class Boss : MonoBehaviour
             $"HP {maxHealth} | " +
             $"방어력 {defense}"
         );
+    }
+
+
+    // =========================================================
+    // ★ Boss2 1페이지 보상
+    // =========================================================
+
+    void GiveBoss2Phase1Reward()
+    {
+        Debug.Log(
+            "<color=yellow>" +
+            "[Boss2 1페이지 보상 시작]" +
+            "</color>"
+        );
+
+
+        // =====================================================
+        // 플레이어 레벨 +1
+        // =====================================================
+
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.level +=
+                phase1RewardLevel;
+
+            Debug.Log(
+                $"<color=green>" +
+                "[Boss2 1페이지 보상]" +
+                "</color> " +
+                $"플레이어 레벨 +{phase1RewardLevel}"
+            );
+        }
+
+
+        // =====================================================
+        // BloodHit 잠금해제
+        // =====================================================
+
+        if (unlockBloodHitOnPhase1)
+        {
+            if (onBoss2Phase1UnlockBloodHit != null)
+            {
+                onBoss2Phase1UnlockBloodHit.Invoke();
+
+                Debug.Log(
+                    "<color=magenta>" +
+                    "[Boss2 1페이지 보상]" +
+                    "</color> BloodHit 잠금해제 이벤트 실행!"
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "<color=yellow>" +
+                    "[Boss2 1페이지 보상]" +
+                    "</color> " +
+                    "BloodHit 잠금해제 이벤트가 Inspector에 연결되지 않았습니다."
+                );
+            }
+        }
+
+
+        // =====================================================
+        // 아이템 선택
+        // =====================================================
+
+        LevelUp levelUpUI =
+            GameObject.FindAnyObjectByType<LevelUp>();
+
+
+        if (levelUpUI != null)
+        {
+            // 현재 프로젝트의 기존 보상 UI를 호출한다.
+            levelUpUI.ShowBossReward();
+
+            Debug.Log(
+                "<color=cyan>" +
+                "[Boss2 1페이지 보상]" +
+                "</color> 아이템 보상 선택 UI 호출!"
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[Boss2 1페이지 보상] LevelUp UI를 찾을 수 없습니다."
+            );
+        }
     }
 
 
@@ -2397,9 +2518,13 @@ public class Boss : MonoBehaviour
             Debug.Log(
                 "<color=yellow>" +
                 "[Boss2]</color> " +
-                "1페이지 종료 → 2페이지!"
+                "1페이지 HP 0 → 2페이지 전환!"
             );
 
+
+            // =================================================
+            // 1페이지 버프 종료
+            // =================================================
 
             boss2PersistentBuff = false;
 
@@ -2414,6 +2539,20 @@ public class Boss : MonoBehaviour
 
             DestroyActiveBuffSkill();
 
+
+            // =================================================
+            // ★ 1페이지 보상
+            // 레벨 +1
+            // BloodHit 해금
+            // 아이템 보상
+            // =================================================
+
+            GiveBoss2Phase1Reward();
+
+
+            // =================================================
+            // 2페이지
+            // =================================================
 
             boss2Phase = 2;
 
@@ -2710,6 +2849,11 @@ public class Boss : MonoBehaviour
             }
 
             DestroyActiveBuffSkill();
+
+            HideBoss2OldVisuals();
+
+            // ★ 실제 생성된 폼 제거
+            DestroyActivePhaseForm();
         }
 
 
@@ -2773,17 +2917,9 @@ public class Boss : MonoBehaviour
         {
             HideBoss2OldVisuals();
 
-
-            if (phase2Form != null)
-                phase2Form.SetActive(false);
-
-
-            if (phase3Form != null)
-                phase3Form.SetActive(false);
-
+            DestroyActivePhaseForm();
 
             SetBoss2BodyVisible(false);
-
 
             GiveBoss2FinalReward();
         }

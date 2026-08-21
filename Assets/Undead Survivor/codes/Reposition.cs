@@ -2,16 +2,15 @@ using UnityEngine;
 
 public class Reposition : MonoBehaviour
 {
-    Collider2D coll;
-
-    void Awake()
-    {
-        coll = GetComponent<Collider2D>();
-    }
-
     void OnTriggerExit2D(Collider2D collision)
     {
         if (!collision.CompareTag("Area"))
+            return;
+
+        if (GameManager.instance == null)
+            return;
+
+        if (GameManager.instance.player == null)
             return;
 
         Vector3 playrtPos = GameManager.instance.player.transform.position;
@@ -49,5 +48,4 @@ public class Reposition : MonoBehaviour
                 break;
         }
     }
-
 }
