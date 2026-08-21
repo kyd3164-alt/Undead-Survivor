@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: 13665b55258a88a42ae2b6d7da5bb251
+guid: 3a2a7f6e1b5766d4f9857a974fe1082a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 78149100790622227
-    second: "2\uBCF4\uC2A4_\uC545\uCC9C-\uD3FC\uCCB4\uC778\uC9C0-\uBC30\uACBD\uC81C\uAC70_0"
+      213: -3127309735575911706
+    second: "\uBE14\uB7EC\uB4DC_\uD788\uD2B8-\uC544\uC774\uD15C_0"
+  - first:
+      213: -6811667011781524987
+    second: "\uBE14\uB7EC\uB4DC_\uD788\uD2B8-\uC544\uC774\uD15C_1"
+  - first:
+      213: 5242781001480277405
+    second: "\uBE14\uB7EC\uB4DC_\uD788\uD2B8-\uC544\uC774\uD15C_2"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +132,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "2\uBCF4\uC2A4_\uC545\uCC9C-\uD3FC\uCCB4\uC778\uC9C0-\uBC30\uACBD\uC81C\uAC70_0"
+      name: "\uBE14\uB7EC\uB4DC_\uD788\uD2B8-\uC544\uC774\uD15C_0"
       rect:
         serializedVersion: 2
-        x: 121
-        y: 5
-        width: 527
-        height: 288
+        x: 190
+        y: 40
+        width: 300
+        height: 300
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +147,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 31824207134a51100800000000000000
-      internalID: 78149100790622227
+      spriteID: 6e2806c5d509994d0800000000000000
+      internalID: -3127309735575911706
       vertices: []
       indices: 
       edges: []
@@ -151,7 +157,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 54460fed66b91ad44aeee3fe45b12d18
+    spriteID: 032f14497d9af5d459b01bd34a6af3ce
     internalID: 0
     vertices: []
     indices: 
@@ -159,9 +165,11 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries: []
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":677.0,"y":369.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      "2\uBCF4\uC2A4_\uC545\uCC9C-\uD3FC\uCCB4\uC778\uC9C0-\uBC30\uACBD\uC81C\uAC70_0": 78149100790622227
+      "\uBE14\uB7EC\uB4DC_\uD788\uD2B8-\uC544\uC774\uD15C_0": -3127309735575911706
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1,108 +1,656 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class LevelUp : MonoBehaviour
 {
     RectTransform rect;
+
     Item[] items;
 
-    private int activeItemCount;
+    // =========================================================
+    // 처음부터 해금되어 있는 아이템 개수
+    // =========================================================
 
-    // ➕ 이번에 고를 수 있는 남은 횟수 저장 변수
+    [Header("처음부터 해금할 아이템 개수")]
+    [SerializeField]
+    private int startingUnlockedItemCount = 4;
+
+
+    // =========================================================
+    // 특수 아이템 해금 대상
+    // =========================================================
+
+    [Header("특수 아이템 해금")]
+    [Tooltip("Boss 1 처치 후 해금할 용기의 권능")]
+    [SerializeField]
+    private Item couragePowerItem;
+
+    [Tooltip("2Boss 1페이지 처치 후 해금할 블러드 히트")]
+    [SerializeField]
+    private Item bloodHitItem;
+
+    [Tooltip("2Boss 2페이지 처치 후 해금할 희망의 호프")]
+    [SerializeField]
+    private Item hopeOfHopeItem;
+
+
+    // =========================================================
+    // 음료수
+    // =========================================================
+
+    [Header("최대 레벨 아이템 대체용")]
+    [Tooltip("최대 레벨 아이템 대신 등장시킬 음료수")]
+    [SerializeField]
+    private Item healItem;
+
+
+    // =========================================================
+    // 현재 해금된 아이템
+    // =========================================================
+
+    private HashSet<Item> unlockedItems =
+        new HashSet<Item>();
+
+
+    // =========================================================
+    // 현재 남은 선택 횟수
+    // =========================================================
+
     private int remainingCount = 0;
+
+
+    // =========================================================
+    // Awake
+    // =========================================================
 
     void Awake()
     {
-        rect = GetComponent<RectTransform>();
-        items = GetComponentsInChildren<Item>(true);
-        activeItemCount = items.Length - 1;
+        rect =
+            GetComponent<RectTransform>();
+
+        items =
+            GetComponentsInChildren<Item>(true);
+
+
+        // -----------------------------------------------------
+        // 처음부터 해금된 아이템 등록
+        // -----------------------------------------------------
+
+        for (int i = 0;
+             i < items.Length;
+             i++)
+        {
+            Item item = items[i];
+
+            if (item == null)
+                continue;
+
+            if (item == healItem)
+                continue;
+
+            if (item == couragePowerItem)
+                continue;
+
+            if (item == bloodHitItem)
+                continue;
+
+            if (item == hopeOfHopeItem)
+                continue;
+
+            if (i < startingUnlockedItemCount)
+            {
+                unlockedItems.Add(item);
+            }
+        }
+
+
+        // -----------------------------------------------------
+        // 음료수는 항상 사용 가능
+        // -----------------------------------------------------
+
+        if (healItem != null)
+        {
+            unlockedItems.Add(healItem);
+        }
+
+
+        // -----------------------------------------------------
+        // 특수 아이템은 처음에는 잠금
+        // -----------------------------------------------------
+
+        if (couragePowerItem != null)
+        {
+            couragePowerItem.gameObject.SetActive(false);
+        }
+
+        if (bloodHitItem != null)
+        {
+            bloodHitItem.gameObject.SetActive(false);
+        }
+
+        if (hopeOfHopeItem != null)
+        {
+            hopeOfHopeItem.gameObject.SetActive(false);
+        }
     }
 
-    // 🎯 [기존과 동일] 일반 경험치 레벨업용 함수 (인자값 없으므로 다른 소스코드 에러 안 남)
+
+    // =========================================================
+    // 일반 레벨업
+    // =========================================================
+
     public void Show()
     {
-        remainingCount = 1; // 일반 레벨업은 딱 1번만 고르기
+        remainingCount = 1;
 
         Next();
-        rect.localScale = Vector3.one;
+
+        rect.localScale =
+            Vector3.one;
+
         GameManager.instance.Stop();
-        AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);
+
+        AudioManager.instance.PlaySfx(
+            AudioManager.Sfx.LevelUp
+        );
+
         AudioManager.instance.EffectBgm(true);
     }
 
-    // 🚨 [새로 추가] 보스 처치용 5연속 레벨업 전용 함수!
+
+    // =========================================================
+    // Boss 1 보상
+    // =========================================================
+
     public void ShowBossReward()
     {
-        remainingCount = 5; // 보스 보상은 총 5번 고르기
+        remainingCount = 5;
 
         Next();
-        rect.localScale = Vector3.one;
+
+        rect.localScale =
+            Vector3.one;
+
         GameManager.instance.Stop();
-        AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);
+
+        AudioManager.instance.PlaySfx(
+            AudioManager.Sfx.LevelUp
+        );
+
         AudioManager.instance.EffectBgm(true);
     }
+
+
+    // =========================================================
+    // Boss 2 페이즈 보상
+    // =========================================================
+
+    public void ShowBossPhaseReward()
+    {
+        remainingCount = 1;
+
+        Next();
+
+        rect.localScale =
+            Vector3.one;
+
+        GameManager.instance.Stop();
+
+        AudioManager.instance.PlaySfx(
+            AudioManager.Sfx.LevelUp
+        );
+
+        AudioManager.instance.EffectBgm(true);
+
+        Debug.Log(
+            "<color=cyan>" +
+            "[Boss2 보상]</color> " +
+            "아이템 1개를 선택하세요."
+        );
+    }
+
+
+    // =========================================================
+    // UI 닫기 / 다음 선택
+    // =========================================================
 
     public void Hide()
     {
-        // 아이템을 하나 골랐으므로 남은 횟수를 1 감소시킵니다.
         remainingCount--;
 
-        // 만약 아직도 고를 횟수가 남아있다면 (예: 5번 중 1번 골라서 4번 남은 경우)
         if (remainingCount > 0)
         {
-            Next(); // 새로운 아이템 3개로 리프레시
-            AudioManager.instance.PlaySfx(AudioManager.Sfx.LevelUp);
-            return; // 창을 닫지 않고 유지
+            Next();
+
+            AudioManager.instance.PlaySfx(
+                AudioManager.Sfx.LevelUp
+            );
+
+            return;
         }
 
-        // 남은 횟수가 0 이하이면 정상적으로 창을 닫고 게임 재개
+
         remainingCount = 0;
-        rect.localScale = Vector3.zero;
+
+        rect.localScale =
+            Vector3.zero;
+
         GameManager.instance.Resume();
-        AudioManager.instance.PlaySfx(AudioManager.Sfx.Select);
+
+        AudioManager.instance.PlaySfx(
+            AudioManager.Sfx.Select
+        );
+
         AudioManager.instance.EffectBgm(false);
     }
 
+
+    // =========================================================
+    // 아이템 선택
+    // =========================================================
+
     public void Select(int index)
     {
-        items[index].OnClick();
+        if (index < 0 ||
+            index >= items.Length)
+        {
+            Debug.LogWarning(
+                $"⚠️ 잘못된 아이템 인덱스: {index}"
+            );
+
+            return;
+        }
+
+        Item item = items[index];
+
+        if (item == null ||
+            !item.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        item.OnClick();
     }
+
+
+    // =========================================================
+    // 랜덤 아이템 생성
+    // =========================================================
 
     void Next()
     {
+        // -----------------------------------------------------
+        // 모든 선택지 숨기기
+        // -----------------------------------------------------
+
         foreach (Item item in items)
         {
+            if (item == null)
+                continue;
+
             item.gameObject.SetActive(false);
         }
 
-        int[] ran = new int[3];
-        while (true)
-        {
-            ran[0] = Random.Range(0, activeItemCount);
-            ran[1] = Random.Range(0, activeItemCount);
-            ran[2] = Random.Range(0, activeItemCount);
 
-            if (ran[0] != ran[1] && ran[1] != ran[2] && ran[0] != ran[2])
-                break;
+        // -----------------------------------------------------
+        // 선택 가능한 아이템 찾기
+        // -----------------------------------------------------
+
+        List<Item> availableItems =
+            new List<Item>();
+
+
+        foreach (Item item in unlockedItems)
+        {
+            if (item == null)
+                continue;
+
+            // 특수 아이템이 아직 해금되지 않았다면 제외
+            if (!IsItemUnlocked(item))
+                continue;
+
+            // 최대 레벨 아이템 제외
+            if (IsMaxLevel(item))
+                continue;
+
+            availableItems.Add(item);
         }
 
-        for (int index = 0; index < ran.Length; index++)
-        {
-            Item ranItem = items[ran[index]];
 
-            if (ranItem.level == ranItem.data.damages.Length)
+        // -----------------------------------------------------
+        // 최대 레벨이 아닌 아이템 중 랜덤 3개
+        // -----------------------------------------------------
+
+        Shuffle(availableItems);
+
+
+        int showCount =
+            Mathf.Min(3, availableItems.Count);
+
+
+        for (int i = 0;
+             i < showCount;
+             i++)
+        {
+            ShowItem(availableItems[i]);
+        }
+
+
+        // -----------------------------------------------------
+        // 선택 가능한 아이템이 3개보다 적으면
+        // 음료수를 추가해서 3개를 맞춘다.
+        // -----------------------------------------------------
+
+        if (showCount < 3 &&
+            healItem != null)
+        {
+            int needCount =
+                3 - showCount;
+
+            for (int i = 0;
+                 i < needCount;
+                 i++)
             {
-                items[4].gameObject.SetActive(true);
+                ShowHealIfPossible();
             }
-            else
+        }
+
+
+        // -----------------------------------------------------
+        // 최종 확인
+        // -----------------------------------------------------
+
+        int visibleCount = 0;
+
+        foreach (Item item in items)
+        {
+            if (item != null &&
+                item.gameObject.activeSelf)
             {
-                ranItem.gameObject.SetActive(true);
+                visibleCount++;
             }
+        }
+
+
+        Debug.Log(
+            $"🎲 레벨업 선택지 생성 완료: " +
+            $"{visibleCount}개"
+        );
+    }
+
+
+    // =========================================================
+    // 아이템 표시
+    // =========================================================
+
+    void ShowItem(Item item)
+    {
+        if (item == null)
+            return;
+
+        item.gameObject.SetActive(true);
+
+        Button button =
+            item.GetComponent<Button>();
+
+        if (button != null)
+        {
+            button.interactable = true;
+        }
+
+        item.UpdateUI();
+        item.UpdateButtonState();
+    }
+
+
+    // =========================================================
+    // 음료수 표시
+    // =========================================================
+
+    void ShowHealIfPossible()
+    {
+        if (healItem == null)
+            return;
+
+        // 이미 표시되어 있다면 중복 표시하지 않음
+        if (healItem.gameObject.activeSelf)
+            return;
+
+        healItem.gameObject.SetActive(true);
+
+        Button button =
+            healItem.GetComponent<Button>();
+
+        if (button != null)
+        {
+            button.interactable = true;
+        }
+
+        healItem.UpdateUI();
+    }
+
+
+    // =========================================================
+    // 최대 레벨 확인
+    // =========================================================
+
+    bool IsMaxLevel(Item item)
+    {
+        if (item == null)
+            return true;
+
+        if (item.data == null)
+            return true;
+
+        // 음료수는 레벨이 없음
+        if (item.data.itemType ==
+            ItemData.ItemType.Heal)
+        {
+            return false;
+        }
+
+        return item.level >=
+               item.data.damages.Length;
+    }
+
+
+    // =========================================================
+    // 아이템 해금 여부
+    // =========================================================
+
+    bool IsItemUnlocked(Item item)
+    {
+        return unlockedItems.Contains(item);
+    }
+
+
+    // =========================================================
+    // 아이템 해금
+    // =========================================================
+
+    public void UnlockItem(Item item)
+    {
+        if (item == null)
+        {
+            Debug.LogWarning(
+                "⚠️ 해금하려는 Item이 없습니다."
+            );
+
+            return;
+        }
+
+
+        if (unlockedItems.Contains(item))
+        {
+            Debug.Log(
+                $"⚠️ 이미 해금된 아이템입니다: " +
+                $"{item.data.itemName}"
+            );
+
+            return;
+        }
+
+
+        unlockedItems.Add(item);
+
+
+        // 해금된 아이템은 다시 활성화 가능하도록 설정
+        item.gameObject.SetActive(true);
+
+
+        Debug.Log(
+            $"🔓 <color=green>" +
+            $"[아이템 해금 완료]</color> " +
+            $"{item.data.itemName}"
+        );
+    }
+
+
+    // =========================================================
+    // 🛡️ Boss 1 처치
+    // → 용기의 권능 해금
+    // =========================================================
+
+    public void UnlockCouragePower()
+    {
+        if (couragePowerItem == null)
+        {
+            Debug.LogWarning(
+                "⚠️ 용기의 권능 Item이 지정되지 않았습니다."
+            );
+
+            return;
+        }
+
+        UnlockItem(couragePowerItem);
+    }
+
+
+    // =========================================================
+    // 🩸 2Boss 1페이지 처치
+    // → 블러드 히트 해금
+    // =========================================================
+
+    public void UnlockBloodHit()
+    {
+        if (bloodHitItem == null)
+        {
+            Debug.LogWarning(
+                "⚠️ 블러드 히트 Item이 지정되지 않았습니다."
+            );
+
+            return;
+        }
+
+        UnlockItem(bloodHitItem);
+    }
+
+
+    // =========================================================
+    // ❤️‍🔥 2Boss 2페이지 처치
+    // → 희망의 호프 해금
+    // =========================================================
+
+    public void UnlockHopeOfHope()
+    {
+        if (hopeOfHopeItem == null)
+        {
+            Debug.LogWarning(
+                "⚠️ 희망의 호프 Item이 지정되지 않았습니다."
+            );
+
+            return;
+        }
+
+        UnlockItem(hopeOfHopeItem);
+    }
+
+
+    // =========================================================
+    // 랜덤 섞기
+    // =========================================================
+
+    void Shuffle(List<Item> list)
+    {
+        for (int i = list.Count - 1;
+             i > 0;
+             i--)
+        {
+            int randomIndex =
+                Random.Range(0, i + 1);
+
+            Item temp =
+                list[i];
+
+            list[i] =
+                list[randomIndex];
+
+            list[randomIndex] =
+                temp;
         }
     }
 
-    public void UnlockItem(int itemId)
+
+    // =========================================================
+    // 게임 재시작용 초기화
+    // =========================================================
+
+    public void ResetItemUnlocks()
     {
-        activeItemCount = items.Length;
-        Debug.Log($"🔓 [아이템 해금 완료] 이제 ID {itemId} 아이템이 레벨업 선택지에 등장합니다!");
+        unlockedItems.Clear();
+
+
+        // 처음부터 해금된 아이템 복구
+        for (int i = 0;
+             i < items.Length;
+             i++)
+        {
+            Item item = items[i];
+
+            if (item == null)
+                continue;
+
+            if (item == couragePowerItem)
+                continue;
+
+            if (item == bloodHitItem)
+                continue;
+
+            if (item == hopeOfHopeItem)
+                continue;
+
+            if (i < startingUnlockedItemCount ||
+                item == healItem)
+            {
+                unlockedItems.Add(item);
+            }
+        }
+
+
+        // 특수 아이템 잠금
+        if (couragePowerItem != null)
+        {
+            couragePowerItem.gameObject.SetActive(false);
+        }
+
+        if (bloodHitItem != null)
+        {
+            bloodHitItem.gameObject.SetActive(false);
+        }
+
+        if (hopeOfHopeItem != null)
+        {
+            hopeOfHopeItem.gameObject.SetActive(false);
+        }
+
+
+        // 특수 효과도 초기화
+        Item.ResetSpecialItemEffects();
+
+
+        Debug.Log(
+            "🔄 아이템 해금 상태 초기화 완료"
+        );
     }
 }

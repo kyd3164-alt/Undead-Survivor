@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d21170fff4891204795ccfc4ab6fa090, type: 3}
   m_Name: Item 6
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemType: 5
+  itemType: 6
   itemId: 6
   itemName: "\uC6A9\uAE30\uC758 \uAD8C\uB2A5"
   itemDesc: "\uCD5C\uB300 \uCCB4\uB825\uC774 {0}% \uC99D\uAC00"
-  itemIcon: {fileID: 5168003128175742307, guid: 9041fdaa8eeb6bc4492f9f1a6bc7a214, type: 3}
+  itemIcon: {fileID: 5716781707964038201, guid: fdc3db813de0ec64ab014304f13fec04, type: 3}
+  itemEffects: []
   baseDamage: 0
   baseCount: 0
   damages:
@@ -26,6 +27,5 @@ MonoBehaviour:
   - 150
   - 300
   counts: 
-  healthPercent: 0
   projectile: {fileID: 0}
   hand: {fileID: 0}

@@ -178,7 +178,7 @@ MonoBehaviour:
   speed: 15
   damage: 40
   attackSpeed: 1
-  defense: 200
+  defense: 100
   healthRegenPerSec: 10000
   meleeAttackRange: 3
   meleeAttackRadius: 2
@@ -200,6 +200,14 @@ MonoBehaviour:
   slashDamagePerSecond: 10
   slashTickInterval: 0.5
   slashDamageDuration: 3
+  phase2Form: {fileID: 288964229382871414, guid: c1bdcee8fd0bc3c4bb947286176d929b, type: 3}
+  phase3Form: {fileID: 4326878561948243228, guid: 93eef0a4915c0964284e7bd3aea7c1eb, type: 3}
+  phase2DefenseBonus: 100
+  phase2BuffMultiplier: 1
+  phase3DefenseBonus: 200
+  phase3BuffMultiplier: 2
+  phase2ItemId: 7
+  phase3ItemId: 8
   awakenStatMultiplier: 1.5
   minionPrefab: {fileID: 0}
   spawnPoints: []

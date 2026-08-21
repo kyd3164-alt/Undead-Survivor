@@ -1,10 +1,25 @@
 fileFormatVersion: 2
-guid: 9041fdaa8eeb6bc4492f9f1a6bc7a214
+guid: 6576fbc6462e9694aaedfd1c17e424e8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5168003128175742307
-    second: "\uC6A9\uAE30\uC758 \uAD8C\uB2A5_0"
+      213: -8709967148977274311
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_0"
+  - first:
+      213: 8110914526721526130
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_1"
+  - first:
+      213: 397481275522135121
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_2"
+  - first:
+      213: 8258837948730534553
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_3"
+  - first:
+      213: 7470776843356805064
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_4"
+  - first:
+      213: -4185468025766608220
+    second: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_5"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,23 +141,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\uC6A9\uAE30\uC758 \uAD8C\uB2A5_0"
+      name: "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_0"
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1408
-        height: 768
+        x: 165
+        y: 30
+        width: 350
+        height: 300
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 36dc50db67f68b740800000000000000
-      internalID: 5168003128175742307
+      spriteID: 93243ef760bff1780800000000000000
+      internalID: -8709967148977274311
       vertices: []
       indices: 
       edges: []
@@ -151,7 +166,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: f80555b742a442f4cbc5ca779bc31bd5
     internalID: 0
     vertices: []
     indices: 
@@ -159,9 +174,11 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     spriteCustomMetadata:
-      entries: []
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":677.0,"y":369.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      "\uC6A9\uAE30\uC758 \uAD8C\uB2A5_0": 5168003128175742307
+      "\uD76C\uB9DD\uC758_\uD638\uD504-\uC544\uC774\uD15C_0": -8709967148977274311
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

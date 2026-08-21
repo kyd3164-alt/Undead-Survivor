@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d21170fff4891204795ccfc4ab6fa090, type: 3}
   m_Name: Item 3
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemType: 3
+  itemType: 4
   itemId: 3
   itemName: "\uC804\uD22C \uC7A5\uD654"
   itemDesc: "\uC774\uB3D9\uC18D\uB3C4 {0}% \uC99D\uAC00"
   itemIcon: {fileID: -966295699, guid: d71a3dc7aa20fad4f9a99fc76a9254ba, type: 3}
+  itemEffects: []
   baseDamage: 0
   baseCount: 0
   damages:

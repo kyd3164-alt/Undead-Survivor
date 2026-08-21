@@ -1,97 +1,466 @@
 ﻿using System.Collections;
 using UnityEngine;
-using UnityEngine.UI; // UI 슬라이더를 사용하기 위해 추가
+using UnityEngine.UI;
 
 public class Boss : MonoBehaviour
 {
-    public enum BossType { Boss1, Boss2, Boss3 }
-    public enum BossState { Appearance, Idle, Move, Attack_Melee, Attack_Ranged, Dead }
+    // =========================================================
+    // Boss Type
+    // =========================================================
+
+    public enum BossType
+    {
+        Boss1,
+        Boss2,
+        Boss3
+    }
+
+    public enum BossState
+    {
+        Appearance,
+        Idle,
+        Move,
+        Attack_Melee,
+        Attack_Ranged,
+        Dead
+    }
+
+
+    // =========================================================
+    // 공통 설정
+    // =========================================================
 
     [Header("========================================")]
     [Header("            [보스 공통 설정]            ")]
     [Header("========================================")]
+
     public BossType bossType;
     public BossState currentState = BossState.Appearance;
 
+
     [Header("--- 공통 능력치 ---")]
-    public float maxHealth = 1000f;             // 최대 체력
-    public float currentHealth;               // 현재 체력
-    public float speed = 2f;                  // 이동 속도
-    public float damage = 10f;                // 기본 데미지
-    public float attackSpeed = 1.0f;          // 공격 속도 가속도
-    public float defense = 5f;                // 방어력
-    public float healthRegenPerSec = 1f;      // 초당 체력 회복량
+
+    public float maxHealth = 1000f;
+    public float currentHealth;
+
+    public float speed = 2f;
+    public float damage = 10f;
+    public float attackSpeed = 1f;
+    public float defense = 5f;
+
+    public float healthRegenPerSec = 1f;
+
 
     [Header("--- 공통 사거리 & 쿨타임 ---")]
-    public float meleeAttackRange = 3f;   // 근접 공격 인식 거리
-    public float meleeAttackRadius = 2f;  // 근접 공격 타격 범위
-    public float rangedAttackCooldown = 5f; // 원거리/스킬 공격 쿨타임
+
+    public float meleeAttackRange = 3f;
+    public float meleeAttackRadius = 2f;
+
+    public float rangedAttackCooldown = 5f;
+
     private float lastRangedAttackTime;
 
+
+    // =========================================================
+    // 원본 능력치
+    // =========================================================
+
+    private float baseMaxHealth;
+    private float baseSpeed;
+    private float baseDamage;
+    private float baseAttackSpeed;
+    private float baseDefense;
+    private float baseHealthRegen;
+
+
+    // =========================================================
+    // Boss1
+    // =========================================================
+
     [Header("========================================")]
-    [Header("       [Boss 1 : 케르베로스 전용]        ")]
+    [Header("       [Boss 1 : 케르베로스 전용]       ")]
     [Header("========================================")]
+
     public Transform[] firePoints;
+
     public GameObject fireBallPrefab;
     public GameObject lightningPrefab;
+
     public float jumpAttackRadius = 2.5f;
+
     public GameObject lavaPrefab;
     public float lavaDuration = 3f;
     public float lavaDamage = 5f;
-    public float lavaRadius = 3f; // 💡 장판 크기에 맞춰 타격 범위도 2 -> 3으로 변경
+    public float lavaRadius = 3f;
+
     public float slowDebuffAmount = 0.5f;
     public float debuffDuration = 2f;
 
+
+    // =========================================================
+    // Boss2
+    // =========================================================
+
     [Header("========================================")]
-    [Header("       [Boss 2 : 악천 전용]        ")]
+    [Header("       [Boss 2 : 악천 전용]             ")]
     [Header("========================================")]
 
-    [Tooltip("Boss2의 주변 검 휘두르기 연출 프리팹")]
+
+    // =========================================================
+    // Boss2 버프 스킬
+    // =========================================================
+
+    [Header("========================================")]
+    [Header("       [Boss2 버프 스킬]                 ")]
+    [Header("========================================")]
+
+    [Tooltip("악천 전용 버프 스킬 프리팹")]
+    public GameObject buffSkillPrefab;
+
+    [Tooltip("Boss2 버프 스킬 사용 여부")]
+    public bool useBuffSkill = true;
+
+    [Tooltip("1페이지 버프 스킬 지속시간")]
+    public float buffSkillDuration = 5f;
+
+    [Tooltip("버프 스킬 사정거리")]
+    public float buffSkillRange = 4f;
+
+    [Tooltip("버프 스킬이 플레이어에게 주는 초당 데미지")]
+    public float buffDamagePerSecond = 10f;
+
+    [Tooltip("버프 스킬이 보스 자신에게 주는 초당 회복량")]
+    public float buffHealPerSecond = 5f;
+
+    [Tooltip("버프 피해 및 회복 판정 간격")]
+    public float buffTickInterval = 1f;
+
+    [Tooltip("1페이지 버프 종료 후 다시 사용하기까지 대기시간")]
+    public float buffSkillCooldown = 3f;
+
+    private GameObject activeBuffSkill;
+
+    private Coroutine buffSkillRoutine;
+
+    private float lastBuffSkillTime = -999f;
+
+    // 2페이지 / 3페이지에서 상시 버프 사용 여부
+    private bool boss2PersistentBuff = false;
+
+
+    // =========================================================
+    // Boss2 1페이지
+    // =========================================================
+
+    [Header("--- Boss2 1페이지 슬래시 ---")]
+
+    [Tooltip("1페이지에서 생성되는 슬래시 프리팹")]
     public GameObject slashPrefab;
 
-    [Tooltip("Boss2의 범위 공격 + 회복 오라 프리팹")]
+    [Tooltip("1페이지 슬래시 사용 후 참격이 시작되기까지 시간")]
+    public float phase1SlashDelay = 1f;
+
+    [Tooltip("1페이지에서 발사할 참격 프리팹")]
+    public GameObject phase1ProjectilePrefab;
+
+    [Tooltip("1페이지 참격 발사 간격")]
+    public float phase1ShotInterval = 0.25f;
+
+    [Tooltip("1페이지 한 번에 생성할 참격 개수")]
+    public int phase1SlashCount = 1;
+
+    [Tooltip("1페이지 참격 이동 속도")]
+    public float phase1SlashSpeed = 7f;
+
+    [Tooltip("1페이지 참격 생성 거리")]
+    public float phase1SpawnDistance = 0f;
+
+    [Tooltip("1페이지 슬래시가 유지되는 시간")]
+    public float phase1SlashDuration = 5f;
+
+
+    // =========================================================
+    // Boss2 1페이지 주변 공격
+    // =========================================================
+
+    [Header("--- Boss2 1페이지 주변 공격 ---")]
+
     public GameObject skillPrefab;
 
-    [Header("--- Boss2 주변 참격 피해 설정 ---")]
-
-    [Tooltip("주변 참격이 피해를 주는 범위")]
     public float slashRadius = 4f;
-
-    [Tooltip("참격이 처음 발생할 때 들어가는 강한 피해")]
     public float slashInitialDamage = 50f;
-
-    [Tooltip("초기 피해 이후 지속적으로 들어가는 피해")]
     public float slashDamagePerSecond = 10f;
-
-    [Tooltip("지속 피해를 몇 초마다 한 번 적용할지")]
     public float slashTickInterval = 0.5f;
-
-    [Tooltip("지속 피해가 유지되는 시간")]
     public float slashDamageDuration = 3f;
 
+
+    // =========================================================
+    // Boss2 폼체인지
+    // =========================================================
+
+    [Header("--- Boss2 폼체인지 ---")]
+
+    [Tooltip("Boss2 2페이지에서 켜지는 폼")]
+    public GameObject phase2Form;
+
+    [Tooltip("Boss2 3페이지에서 켜지는 분노 폼")]
+    public GameObject phase3Form;
+
+
+    // =========================================================
+    // Boss2 페이지별 방어력
+    // =========================================================
+
+    [Header("--- Boss2 페이지별 방어력 증가 ---")]
+
+    [Tooltip("2페이지 추가 방어력")]
+    public float phase2DefenseBonus = 10f;
+
+    [Tooltip("3페이지 추가 방어력")]
+    public float phase3DefenseBonus = 20f;
+
+
+    // =========================================================
+    // Boss2 페이지별 능력치 배율
+    // =========================================================
+
+    [Header("--- Boss2 페이지별 능력치 배율 ---")]
+
+    [Tooltip("2페이지 능력치 배율")]
+    public float phase2BuffMultiplier = 1f;
+
+    [Tooltip("3페이지 능력치 배율")]
+    public float phase3BuffMultiplier = 2f;
+
+
+    // =========================================================
+    // Boss2 2페이지 참격
+    // =========================================================
+
     [Header("========================================")]
-    [Header("         [Boss 3 : 드래곤 각성 전용]      ")]
+    [Header("       [Boss2 2페이지 참격]              ")]
     [Header("========================================")]
-    [Range(1f, 3f)] public float awakenStatMultiplier = 1.5f;
+
+    [Tooltip("2페이지에서 발사할 참격 프리팹")]
+    public GameObject phase2ProjectilePrefab;
+
+    [Tooltip("2페이지 참격이 발동되는 지속 시간")]
+    public float phase2ProjectileDuration = 5f;
+
+    [Tooltip("2페이지 참격 발사 간격")]
+    public float phase2ShotInterval = 0.25f;
+
+    [Tooltip("2페이지 한 번에 생성할 참격 개수")]
+    public int phase2SlashCount = 1;
+
+    [Tooltip("2페이지 참격 이동 속도")]
+    public float phase2SlashSpeed = 7f;
+
+    [Tooltip("2페이지 참격 생성 거리")]
+    public float phase2SpawnDistance = 0f;
+
+    [Tooltip("2페이지 참격이 끝난 후 다음 참격까지 대기 시간")]
+    public float phase2ProjectileCooldown = 2f;
+
+
+    // =========================================================
+    // Boss2 3페이지 기본 참격
+    // =========================================================
+
+    [Header("========================================")]
+    [Header("       [Boss2 3페이지 기본 참격]          ")]
+    [Header("========================================")]
+
+    [Tooltip("3페이지 기본 참격 프리팹")]
+    public GameObject phase3ProjectilePrefab;
+
+    [Tooltip("3페이지 기본 참격 발사 간격")]
+    public float phase3ShotInterval = 0.25f;
+
+    [Tooltip("3페이지 한 번에 생성할 참격 개수")]
+    public int phase3SlashCount = 1;
+
+    [Tooltip("3페이지 참격 이동 속도")]
+    public float phase3SlashSpeed = 7f;
+
+    [Tooltip("3페이지 참격 생성 거리")]
+    public float phase3SpawnDistance = 0f;
+
+
+    // =========================================================
+    // Boss2 3페이지 추가 슬래시
+    // =========================================================
+
+    [Header("========================================")]
+    [Header("       [Boss2 3페이지 추가 슬래시]        ")]
+    [Header("========================================")]
+
+    [Tooltip("3페이지 추가 슬래시 패턴 사용")]
+    public bool usePhase3ExtraSlash = true;
+
+    [Tooltip("3페이지 추가 슬래시 프리팹")]
+    public GameObject phase3ExtraSlashPrefab;
+
+    [Tooltip("3페이지 추가 슬래시 후 참격까지 대기")]
+    public float phase3ExtraSlashDelay = 1f;
+
+    [Tooltip("3페이지 추가 참격 프리팹")]
+    public GameObject phase3ExtraProjectilePrefab;
+
+    [Tooltip("3페이지 추가 참격 지속 시간")]
+    public float phase3ExtraProjectileDuration = 5f;
+
+    [Tooltip("3페이지 추가 참격 발사 간격")]
+    public float phase3ExtraShotInterval = 0.25f;
+
+    [Tooltip("3페이지 추가 참격 개수")]
+    public int phase3ExtraSlashCount = 1;
+
+    [Tooltip("3페이지 추가 참격 속도")]
+    public float phase3ExtraSlashSpeed = 7f;
+
+    [Tooltip("3페이지 추가 참격 생성 거리")]
+    public float phase3ExtraSpawnDistance = 0f;
+
+    [Tooltip("3페이지 추가 슬래시 패턴 쿨타임")]
+    public float phase3ExtraSlashCooldown = 8f;
+
+    private float lastPhase3ExtraSlashTime = -999f;
+
+
+    // =========================================================
+    // Boss2 내부 상태
+    // =========================================================
+
+    private int boss2Phase = 1;
+
+    private bool boss2PhaseChanging = false;
+
+    private GameObject activeSlashObject;
+    private GameObject activeSkillObject;
+
+
+    // =========================================================
+    // Boss3
+    // =========================================================
+
+    [Header("========================================")]
+    [Header("         [Boss 3 : 드래곤 각성 전용]     ")]
+    [Header("========================================")]
+
+    [Range(1f, 3f)]
+    public float awakenStatMultiplier = 1.5f;
+
     public GameObject minionPrefab;
+
     public Transform[] spawnPoints;
+
     public GameObject phase2AuraEffect;
-    [SerializeField] private bool isPhase2OvertimeBuffActive = false;
+
+    [SerializeField]
+    private bool isPhase2OvertimeBuffActive = false;
 
     private bool isAwakened = false;
+
+
+    // =========================================================
+    // 내부 변수
+    // =========================================================
+
     private SpriteRenderer spriteRenderer;
-    private Animator animator; // 애니메이터 컴포넌트
+    private Animator animator;
     private Transform target;
 
-    // 💡 착지 목표 지점을 기억할 위치 변수
     private Vector3 lastLandingPosition;
 
-    // 꽂아줄 변수와 함수 (여기에 넣어주세요!)
     private Slider hpSlider;
+
+
+    // =========================================================
+    // Awake
+    // =========================================================
+
+    void Awake()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>();
+
+        baseMaxHealth = maxHealth;
+        baseSpeed = speed;
+        baseDamage = damage;
+        baseAttackSpeed = attackSpeed;
+        baseDefense = defense;
+        baseHealthRegen = healthRegenPerSec;
+    }
+
+
+    // =========================================================
+    // Start
+    // =========================================================
+
+    void Start()
+    {
+        if (GameManager.instance != null &&
+            GameManager.instance.player != null)
+        {
+            target =
+                GameManager.instance.player.transform;
+        }
+
+        currentHealth = maxHealth;
+
+
+        // =====================================================
+        // Boss2 폼 초기화
+        // =====================================================
+
+        if (phase2Form != null)
+            phase2Form.SetActive(false);
+
+        if (phase3Form != null)
+            phase3Form.SetActive(false);
+
+
+        // =====================================================
+        // Boss2 초기 본체 표시
+        // =====================================================
+
+        if (bossType == BossType.Boss2)
+        {
+            if (spriteRenderer != null)
+                spriteRenderer.enabled = true;
+        }
+
+
+        // =====================================================
+        // HP BAR
+        // =====================================================
+
+        GameObject sliderObj =
+            GameObject.Find("Boss Health Bar");
+
+        if (sliderObj != null)
+            sliderObj.SetActive(true);
+
+
+        // =====================================================
+        // 등장
+        // =====================================================
+
+        StartCoroutine(AppearanceRoutine());
+
+        StartCoroutine(HealthRegenRoutine());
+    }
+
+
+    // =========================================================
+    // HP BAR
+    // =========================================================
 
     public void SetupHPBar(Slider slider)
     {
         hpSlider = slider;
+
         if (hpSlider != null)
         {
             hpSlider.maxValue = maxHealth;
@@ -99,598 +468,22 @@ public class Boss : MonoBehaviour
         }
     }
 
-    void Awake()
+
+    // =========================================================
+    // ★ 최대 체력 반환
+    // Bullet.cs / 외부 스킬에서 사용
+    // =========================================================
+
+    public float GetMaxHealth()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        animator = GetComponent<Animator>(); // 애니메이터 가져오기
-    }
-
-    void Start()
-    {
-        if (GameManager.instance != null && GameManager.instance.player != null)
-        {
-            target = GameManager.instance.player.transform;
-        }
-
-        currentHealth = maxHealth;
-
-        // [자동 연동] 메인 캔버스 안의 "Boss Health Bar"를 코드로 자동 탐색 및 활성화
-        GameObject sliderObj = GameObject.Find("Boss Health Bar");
-        if (sliderObj != null)
-        {
-            sliderObj.SetActive(true); // 보스가 등장하면 체력바 켜기
-        }
-
-        StartCoroutine(AppearanceRoutine());
-        StartCoroutine(HealthRegenRoutine());
-    }
-
-    void Update()
-    {
-        // 1. [체력바 동기화] 스포너가 꽂아준 hpSlider가 존재할 때만 실시간 체력 수치를 동기화합니다.
-        if (hpSlider != null)
-        {
-            hpSlider.value = currentHealth;
-        }
-
-        // 2. 🚨 [물리 엔진 완전 우회 - 확정 타격 시스템]
-        // 보스 스스로가 씬에 날아다니는 모든 총알/무기(Bullet)들을 직접 찾아냅니다.
-        Bullet[] activeBullets = Object.FindObjectsByType<Bullet>(FindObjectsSortMode.None);
-
-        foreach (Bullet bullet in activeBullets)
-        {
-            if (bullet == null || !bullet.gameObject.activeInHierarchy) continue;
-
-            // 보스 본체(내 위치)와 날아가는 무기 사이의 실제 수학적 거리 좌표를 직접 계산
-            float distance = Vector2.Distance(transform.position, bullet.transform.position);
-
-            // 💡 보스의 거대한 덩치(반지름 2.2m) 안에 무기가 들어왔다면 물리 충돌 무시하고 대미지 강제 집행!
-            if (distance <= 2.2f)
-            {
-                // [대미지 버그 안전장치] 무기 대미지가 0 이하라면 강제로 20f 대미지를 적용합니다.
-                float weaponDamage = bullet.damage <= 0 ? 20f : bullet.damage;
-
-                // 보스 내 자신의 TakeDamage 함수를 직접 실행하여 피를 깎아버립니다!
-                TakeDamage(weaponDamage);
-
-                // 🚨 [시각적 확인용 로그] 유니티 콘솔 창에 강제 타격 완료 로그를 확실하게 띄웁니다.
-                Debug.Log($"<color=#FF00FF>[보스 자체 확정 타격]</color> 무기 감지 완료! 거리: {distance:F2}m | 데미지: {weaponDamage}를 스스로 받았습니다.");
-
-                // 무한 관통 무기(id 0번, 5번)가 아니라면 대미지를 입었으니 해당 무기 오브젝트를 비활성화(소멸) 처리
-                if (bullet.id != 0 && bullet.id != 5)
-                {
-                    bullet.per--;
-                    if (bullet.per < 0)
-                    {
-                        Rigidbody2D bulletRigid = bullet.GetComponent<Rigidbody2D>();
-                        if (bulletRigid != null) bulletRigid.linearVelocity = Vector2.zero;
-                        bullet.gameObject.SetActive(false); // 무기 사라짐
-                    }
-                }
-            }
-        }
+        return maxHealth;
     }
 
 
-
-    void OnDestroy()
-    {
-        // [자동 정리] 보스가 죽거나 사라질 때 메인 체력바 다시 끄기
-        GameObject sliderObj = GameObject.Find("Boss Health Bar");
-        if (sliderObj != null)
-        {
-            sliderObj.SetActive(false);
-        }
-    }
-
-    IEnumerator HealthRegenRoutine()
-    {
-        while (currentState != BossState.Dead)
-        {
-            yield return new WaitForSeconds(1f);
-            if (currentHealth < maxHealth && currentState != BossState.Appearance)
-            {
-                currentHealth += healthRegenPerSec;
-                if (currentHealth > maxHealth) currentHealth = maxHealth;
-            }
-        }
-    }
-
-    IEnumerator AppearanceRoutine()
-    {
-        currentState = BossState.Appearance;
-
-        for (int i = 0; i < 3; i++)
-        {
-            spriteRenderer.color = new Color(1, 0, 0, 0.5f);
-            yield return new WaitForSeconds(0.2f);
-            spriteRenderer.color = Color.white;
-            yield return new WaitForSeconds(0.2f);
-        }
-
-        currentState = BossState.Move;
-        StartCoroutine(BossLoop());
-    }
-
-    IEnumerator BossLoop()
-    {
-        while (currentState != BossState.Dead)
-        {
-            currentState = BossState.Move;
-
-            float checkInterval = Random.Range(1.5f, 3f) / attackSpeed;
-            float timer = 0f;
-
-            while (timer < checkInterval)
-            {
-                MoveTowardsPlayer();
-
-                if (target != null)
-                {
-                    float distanceToPlayer = Vector2.Distance(transform.position, target.position);
-                    if (distanceToPlayer <= meleeAttackRange)
-                    {
-                        yield return StartCoroutine(Pattern_MeleeSlash());
-                        break;
-                    }
-                }
-
-                timer += Time.deltaTime;
-                yield return null;
-            }
-
-            if (currentState == BossState.Move && Time.time >= lastRangedAttackTime + (rangedAttackCooldown / attackSpeed))
-            {
-                if (bossType == BossType.Boss1)
-                {
-                    yield return StartCoroutine(Pattern_CerberusSkills());
-                }
-                else
-                {
-                    if (bossType == BossType.Boss3 && Random.value < 0.4f && minionPrefab != null)
-                    {
-                        SpawnMinions();
-                    }
-
-                    yield return StartCoroutine(Pattern_RangedShotgun());
-                }
-            }
-        }
-    }
-
-    void MoveTowardsPlayer()
-    {
-        if (target == null || currentState != BossState.Move) return;
-
-        Vector2 dir = (target.position - transform.position).normalized;
-        transform.position = Vector2.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
-        spriteRenderer.flipX = dir.x < 0;
-    }
-
-    IEnumerator Pattern_MeleeSlash()
-    {
-        currentState = BossState.Attack_Melee;
-
-        spriteRenderer.color = new Color(1f, 0.5f, 0f);
-        yield return new WaitForSeconds(0.5f / attackSpeed);
-        spriteRenderer.color = Color.white;
-
-        if (target != null)
-        {
-            float distanceToPlayer = Vector2.Distance(transform.position, target.position);
-            if (distanceToPlayer <= meleeAttackRadius)
-            {
-                Debug.Log("보스 근접 타격 성공!");
-            }
-        }
-
-        yield return new WaitForSeconds(0.5f / attackSpeed);
-        currentState = BossState.Move;
-    }
-
-    IEnumerator Pattern_CerberusSkills()
-    {
-        currentState = BossState.Attack_Ranged;
-        lastRangedAttackTime = Time.time;
-
-        int patternType = Random.Range(0, 3);
-
-        if (patternType == 0 && fireBallPrefab != null)
-        {
-            spriteRenderer.color = new Color(1f, 0.5f, 0f);
-            yield return new WaitForSeconds(0.5f / attackSpeed);
-            spriteRenderer.color = Color.white;
-
-            for (int i = 0; i < firePoints.Length; i++)
-            {
-                if (firePoints[i] == null) continue;
-
-                Vector2 spawnPos = firePoints[i].position;
-                Vector2 dirToPlayer = target != null ? (target.position - (Vector3)spawnPos).normalized : Vector2.down;
-
-                GameObject fireBall = Instantiate(fireBallPrefab, spawnPos, Quaternion.identity);
-                Rigidbody2D rb = fireBall.GetComponent<Rigidbody2D>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = dirToPlayer * 6f;
-                }
-            }
-        }
-        else if (patternType == 1 && lightningPrefab != null)
-        {
-            spriteRenderer.color = new Color(0.3f, 0.5f, 1f);
-            yield return new WaitForSeconds(0.5f / attackSpeed);
-            spriteRenderer.color = Color.white;
-
-            for (int i = 0; i < firePoints.Length; i++)
-            {
-                if (firePoints[i] == null) continue;
-
-                // [수정 완료] 이제 플레이어 위치가 아닌 보스 입 위치(firePoints[i].position)에서 생성됩니다!
-                Vector3 spawnPos = firePoints[i].position;
-                Instantiate(lightningPrefab, spawnPos, Quaternion.identity);
-
-                // 동시에 발사되면 어색하므로 0.15초씩 간격을 두고 발사
-                yield return new WaitForSeconds(0.15f);
-            }
-        }
-        else
-        {
-            yield return StartCoroutine(Pattern_CerberusJumpAttack());
-        }
-
-        yield return new WaitForSeconds(0.6f / attackSpeed);
-        currentState = BossState.Move;
-    }
-
-    IEnumerator Pattern_CerberusJumpAttack()
-    {
-        if (target == null) yield break;
-
-        // 1. 점프 시작 애니메이션 트리거 실행 (DoJump)
-        if (animator != null) animator.SetTrigger("DoJump");
-
-        // 점프 준비 동작 시간 (올라가는 모션 감상)
-        yield return new WaitForSeconds(0.4f / attackSpeed);
-
-        Vector3 startPos = transform.position;
-        // 💡 플레이어의 현재 위치를 최종 착지 목표 위치로 저장
-        lastLandingPosition = target.position;
-
-        float timer = 0f;
-        float jumpDuration = 0.5f / attackSpeed;
-
-        // 공중으로 이동하는 동안
-        while (timer < jumpDuration)
-        {
-            timer += Time.deltaTime;
-            transform.position = Vector3.Lerp(startPos, lastLandingPosition, timer / jumpDuration);
-            yield return null;
-        }
-
-        // 2. 착지 모션 트리거 실행 (Land)
-        if (animator != null) animator.SetTrigger("Land");
-
-        // 착지 시 직격 디버프 판정
-        float distanceToPlayer = Vector2.Distance(transform.position, target.position);
-        if (distanceToPlayer <= jumpAttackRadius)
-        {
-            ApplyDebuff(target.gameObject);
-        }
-
-        yield return new WaitForSeconds(0.4f / attackSpeed);
-    }
-
-    // 💡 착지 애니메이션 이벤트(Animation Event)에서 호출되는 용암 생성 함수
-    public void SpawnLava()
-    {
-        if (lavaPrefab != null)
-        {
-            // 1. 보스가 착지한 위치(lastLandingPosition)에 용암 생성
-            GameObject lava = Instantiate(lavaPrefab, lastLandingPosition, Quaternion.identity);
-
-            // 2. 💡 애니메이션 파일의 Scale을 무시하고 강제로 3배 확대 적용
-            lava.transform.localScale = new Vector3(3f, 3f, 1f);
-
-            StartCoroutine(LavaRoutine(lava));
-        }
-    }
-
-    // 💡 3초 지속 후 DoEnd 트리거를 실행하고 소멸하는 코루틴
-    IEnumerator LavaRoutine(GameObject lava)
-    {
-        float elapsed = 0f;
-        Animator lavaAnim = lava.GetComponent<Animator>();
-
-        while (elapsed < lavaDuration && lava != null)
-        {
-            if (target != null)
-            {
-                float distToPlayer = Vector2.Distance(lava.transform.position, target.position);
-                if (distToPlayer <= lavaRadius)
-                {
-                    Debug.Log($"용암 장판 도트 데미지 적용: {lavaDamage}");
-                }
-            }
-
-            elapsed += 1f;
-            yield return new WaitForSeconds(1f);
-        }
-
-        if (lava != null)
-        {
-            // 1. 사라지는 애니메이션(Lava_End) 트리거 실행
-            if (lavaAnim != null)
-            {
-                lavaAnim.SetTrigger("DoEnd");
-            }
-
-            // 2. Lava_End 애니메이션이 끝날 시간(약 0.5초) 대기 후 오브젝트 삭제
-            yield return new WaitForSeconds(0.5f);
-            Destroy(lava);
-        }
-    }
-
-    void ApplyDebuff(GameObject targetObj)
-    {
-        Debug.Log($"이동속도 {slowDebuffAmount * 100}% 감소 디버프 적용!");
-    }
-
-    IEnumerator Pattern_RangedShotgun()
-    {
-        // 1. 공격 상태로 전환 및 시간 기록
-        currentState = BossState.Attack_Ranged;
-        lastRangedAttackTime = Time.time;
-
-        // 공격 전 전조 증상 딜레이 (0.8초 동안 기 모으기)
-        spriteRenderer.color = new Color(0.5f, 0f, 0.5f); // 보라색으로 충전 이펙트 느낌
-        yield return new WaitForSeconds(0.8f / attackSpeed);
-        spriteRenderer.color = Color.white;
-
-        // 2. 50% 확률로 슬래시 공격을 하거나, 자가 버프 스킬을 시전합니다.
-        if (Random.value > 0.5f)
-        {
-            // ==========================================
-            // [패턴 A: 오로라 주변 참격]
-            // ==========================================
-
-            if (animator != null)
-            {
-                animator.SetTrigger("doSlash");
-            }
-
-            // 보스 몸 그래픽 숨기기
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.enabled = false;
-            }
-
-            // Boss2에 붙어서 따라다니는 슬래시 스킬 생성
-            if (slashPrefab != null)
-            {
-                GameObject slash = Instantiate(
-                    slashPrefab,
-                    transform.position,
-                    Quaternion.identity,
-                    transform
-                );
-
-                // 생성된 SlashPrefab의 몸 그래픽 숨기기
-                SpriteRenderer slashRenderer =
-                    slash.GetComponent<SpriteRenderer>();
-
-                if (slashRenderer != null)
-                {
-                    // 처음에는 보이게
-                    slashRenderer.enabled = true;
-
-                    // 2초 후 몸 그래픽 숨기기
-                    StartCoroutine(HideSlashBodyAfterDelay(slashRenderer, 2f));
-                }
-            }
-
-            // 주변 순간 피해
-            ApplySlashInitialDamage();
-
-            // 주변 지속 피해
-            StartCoroutine(SlashDamageOverTime());
-
-            // 2초 후 보스 몸 다시 표시
-            StartCoroutine(RestoreBossSpriteAfterSlash());
-        }
-        else
-        {
-            // ==========================================
-            // [패턴 B: 오로라 버프 스킬 시전]
-            // ==========================================
-            // 애니메이터에서 세팅한 doSkill 트리거 발동 (보스 버프 모션 취함)
-            animator.SetTrigger("doSkill");
-
-            // 보스 몸 그래픽 숨기기
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.enabled = false;
-            }
-
-            if (skillPrefab != null)
-            {
-                // 보스 몸 위치에 버프 이펙트 프리팹 소환 (보스를 쫓아다니게 하려면 transform을 부모로 설정)
-                GameObject skill = Instantiate(skillPrefab, transform.position, Quaternion.identity, transform);
-
-                // 보스 자체 능력치 강화 (예: 공격 속도 일시 증가)
-                attackSpeed += 0.2f;
-
-                // 3초 뒤에 능력치 원상복구
-                StartCoroutine(ResetBuff(3f));
-
-                // 버프 이펙트의 SpriteRenderer 가져오기
-                SpriteRenderer skillRenderer =
-                    skill.GetComponent<SpriteRenderer>();
-
-                // 3초 후 이펙트 SpriteRenderer 끄기
-                StartCoroutine(EndBuffVisual(
-                    skillRenderer,
-                    3f
-                ));
-            }
-        }
-
-        // 3. 공격 후딜레이 후 다시 이동 상태로 복귀
-        yield return new WaitForSeconds(0.8f / attackSpeed);
-        currentState = BossState.Move;
-    }
-
-    // ==========================================
-    // 버프 스킬 종료 후 버프 그래픽 끄기
-    // + 보스 몸 그래픽 다시 표시
-    // ==========================================
-    IEnumerator EndBuffVisual(
-    SpriteRenderer skillRenderer,
-    float delay
-)
-    {
-        yield return new WaitForSeconds(delay);
-
-        // 버프 이펙트 그래픽 끄기
-        if (skillRenderer != null)
-        {
-            skillRenderer.enabled = false;
-        }
-
-        // 보스 몸 그래픽 다시 켜기
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.enabled = true;
-        }
-    }
-
-    // ==========================================
-    // 슬래시 종료 후 보스 몸 다시 표시
-    // ==========================================
-    IEnumerator RestoreBossSpriteAfterSlash()
-    {
-        yield return new WaitForSeconds(2f);
-
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.enabled = true;
-        }
-    }
-
-    IEnumerator HideSlashBodyAfterDelay(SpriteRenderer slashRenderer, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-
-        if (slashRenderer != null)
-        {
-            slashRenderer.enabled = false;
-        }
-    }
-
-    void ApplySlashInitialDamage()
-    {
-        if (GameManager.instance == null ||
-            GameManager.instance.player == null)
-        {
-            return;
-        }
-
-        Transform player =
-            GameManager.instance.player.transform;
-
-        float distance =
-            Vector2.Distance(
-                transform.position,
-                player.position
-            );
-
-        if (distance <= slashRadius)
-        {
-            PlayerHealth playerHealth =
-                player.GetComponent<PlayerHealth>();
-
-            if (playerHealth != null)
-            {
-                playerHealth.TakeBossBodyDamage(
-                    slashInitialDamage
-                );
-
-                Debug.Log(
-                    $"<color=red>[Boss2 주변 참격]</color> " +
-                    $"초기 피해 {slashInitialDamage} 적용!"
-                );
-            }
-        }
-    }
-
-    IEnumerator SlashDamageOverTime()
-    {
-        float elapsed = 0f;
-
-        while (elapsed < slashDamageDuration)
-        {
-            yield return new WaitForSeconds(
-                slashTickInterval
-            );
-
-            elapsed += slashTickInterval;
-
-            if (GameManager.instance == null ||
-                GameManager.instance.player == null)
-            {
-                continue;
-            }
-
-            Transform player =
-                GameManager.instance.player.transform;
-
-            float distance =
-                Vector2.Distance(
-                    transform.position,
-                    player.position
-                );
-
-            // 지속 피해 범위 안에 플레이어가 있는지 확인
-            if (distance <= slashRadius)
-            {
-                PlayerHealth playerHealth =
-                    player.GetComponent<PlayerHealth>();
-
-                if (playerHealth != null)
-                {
-                    playerHealth.TakeBossBodyDamage(
-                        slashDamagePerSecond
-                    );
-
-                    Debug.Log(
-                        $"<color=orange>[Boss2 주변 참격]</color> " +
-                        $"지속 피해 {slashDamagePerSecond} 적용!"
-                    );
-                }
-            }
-        }
-    }
-
-    // 버프 지속시간이 끝나면 보스 능력치를 원래대로 돌려놓는 서브 기능입니다.
-    IEnumerator ResetBuff(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        attackSpeed -= 0.2f; // 증가했던 공격 속도 차감
-    }
-
-
-    void SpawnMinions()
-    {
-        if (minionPrefab == null || spawnPoints == null) return;
-
-        foreach (Transform point in spawnPoints)
-        {
-            if (point != null)
-            {
-                Instantiate(minionPrefab, point.position, Quaternion.identity);
-            }
-        }
-    }
+    // =========================================================
+    // ★ Aura 회복
+    // Boss2AuraSkill.cs에서 사용
+    // =========================================================
 
     public void HealFromAura(float amount)
     {
@@ -700,183 +493,2481 @@ public class Boss : MonoBehaviour
         if (amount <= 0f)
             return;
 
+        if (currentHealth >= maxHealth)
+            return;
+
         currentHealth += amount;
 
         if (currentHealth > maxHealth)
-        {
             currentHealth = maxHealth;
-        }
 
         if (hpSlider != null)
-        {
             hpSlider.value = currentHealth;
+    }
+
+
+    // =========================================================
+    // Update
+    // =========================================================
+
+    void Update()
+    {
+        if (hpSlider != null)
+            hpSlider.value = currentHealth;
+
+        if (currentState == BossState.Dead)
+            return;
+
+
+        // =====================================================
+        // 총알 감지
+        // =====================================================
+
+        Bullet[] activeBullets =
+            Object.FindObjectsByType<Bullet>(
+                FindObjectsSortMode.None
+            );
+
+        foreach (Bullet bullet in activeBullets)
+        {
+            if (bullet == null ||
+                !bullet.gameObject.activeInHierarchy)
+                continue;
+
+            float distance =
+                Vector2.Distance(
+                    transform.position,
+                    bullet.transform.position
+                );
+
+            if (distance <= 2.2f)
+            {
+                float weaponDamage =
+                    bullet.damage <= 0f
+                    ? 20f
+                    : bullet.damage;
+
+                TakeDamage(weaponDamage);
+
+                Debug.Log(
+                    $"<color=#FF00FF>" +
+                    $"[보스 자체 확정 타격]" +
+                    $"</color> 무기 감지! " +
+                    $"거리: {distance:F2}m | " +
+                    $"데미지: {weaponDamage}"
+                );
+
+                if (bullet.id != 0 &&
+                    bullet.id != 5)
+                {
+                    bullet.per--;
+
+                    if (bullet.per < 0)
+                    {
+                        Rigidbody2D bulletRigid =
+                            bullet.GetComponent<Rigidbody2D>();
+
+                        if (bulletRigid != null)
+                            bulletRigid.linearVelocity =
+                                Vector2.zero;
+
+                        bullet.gameObject.SetActive(false);
+                    }
+                }
+            }
+        }
+    }
+
+
+    // =========================================================
+    // OnDestroy
+    // =========================================================
+
+    void OnDestroy()
+    {
+        StopAllBoss2Effects();
+
+        GameObject sliderObj =
+            GameObject.Find("Boss Health Bar");
+
+        if (sliderObj != null)
+            sliderObj.SetActive(false);
+    }
+
+
+    // =========================================================
+    // HP Regen
+    // =========================================================
+
+    IEnumerator HealthRegenRoutine()
+    {
+        while (currentState != BossState.Dead)
+        {
+            yield return new WaitForSeconds(1f);
+
+            if (currentHealth < maxHealth &&
+                currentState != BossState.Appearance)
+            {
+                currentHealth += healthRegenPerSec;
+
+                if (currentHealth > maxHealth)
+                    currentHealth = maxHealth;
+            }
+        }
+    }
+
+
+    // =========================================================
+    // 등장
+    // =========================================================
+
+    IEnumerator AppearanceRoutine()
+    {
+        currentState =
+            BossState.Appearance;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color =
+                    new Color(
+                        1f,
+                        0f,
+                        0f,
+                        0.5f
+                    );
+            }
+
+            yield return new WaitForSeconds(0.2f);
+
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    Color.white;
+
+            yield return new WaitForSeconds(0.2f);
         }
 
-        Debug.Log(
-            $"<color=green>[Boss2 회복]</color> " +
-            $"회복량: {amount:F1} | " +
-            $"현재 체력: {currentHealth:F1} / {maxHealth}"
+
+        // Boss2 1페이지
+        if (bossType == BossType.Boss2 &&
+            boss2Phase == 1)
+        {
+            SetBoss2BodyVisible(true);
+        }
+
+        currentState =
+            BossState.Move;
+
+        StartCoroutine(BossLoop());
+    }
+
+
+    // =========================================================
+    // Boss AI
+    // =========================================================
+
+    IEnumerator BossLoop()
+    {
+        while (currentState != BossState.Dead)
+        {
+            if (boss2PhaseChanging)
+                yield break;
+
+            currentState = BossState.Move;
+
+            float checkInterval =
+                Random.Range(1.5f, 3f) /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                );
+
+            float timer = 0f;
+
+            while (timer < checkInterval)
+            {
+                if (currentState == BossState.Dead)
+                    yield break;
+
+                MoveTowardsPlayer();
+
+                if (target != null)
+                {
+                    float distanceToPlayer =
+                        Vector2.Distance(
+                            transform.position,
+                            target.position
+                        );
+
+                    if (distanceToPlayer <=
+                        meleeAttackRange)
+                    {
+                        yield return
+                            StartCoroutine(
+                                Pattern_MeleeSlash()
+                            );
+
+                        break;
+                    }
+                }
+
+                timer += Time.deltaTime;
+
+                yield return null;
+            }
+
+
+            // =================================================
+            // 원거리 스킬 쿨타임
+            // =================================================
+
+            if (currentState == BossState.Move &&
+                Time.time >=
+                lastRangedAttackTime +
+                rangedAttackCooldown /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                ))
+            {
+                if (bossType == BossType.Boss1)
+                {
+                    yield return
+                        StartCoroutine(
+                            Pattern_CerberusSkills()
+                        );
+                }
+                else
+                {
+                    if (bossType == BossType.Boss3 &&
+                        Random.value < 0.4f &&
+                        minionPrefab != null)
+                    {
+                        SpawnMinions();
+                    }
+
+                    yield return
+                        StartCoroutine(
+                            Pattern_RangedShotgun()
+                        );
+                }
+            }
+        }
+    }
+
+
+    // =========================================================
+    // 이동
+    // =========================================================
+
+    void MoveTowardsPlayer()
+    {
+        if (target == null ||
+            currentState != BossState.Move)
+            return;
+
+        Vector2 dir =
+            (
+                target.position -
+                transform.position
+            ).normalized;
+
+        transform.position =
+            Vector2.MoveTowards(
+                transform.position,
+                target.position,
+                speed * Time.deltaTime
+            );
+
+        if (spriteRenderer != null &&
+            spriteRenderer.enabled)
+        {
+            spriteRenderer.flipX =
+                dir.x < 0f;
+        }
+    }
+
+
+    // =========================================================
+    // 근접 공격
+    // =========================================================
+
+    IEnumerator Pattern_MeleeSlash()
+    {
+        currentState =
+            BossState.Attack_Melee;
+
+        if (spriteRenderer != null &&
+            !(bossType == BossType.Boss2 &&
+              boss2Phase >= 2))
+        {
+            spriteRenderer.color =
+                new Color(
+                    1f,
+                    0.5f,
+                    0f
+                );
+        }
+
+        yield return
+            new WaitForSeconds(
+                0.5f /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                )
+            );
+
+        if (spriteRenderer != null &&
+            !(bossType == BossType.Boss2 &&
+              boss2Phase >= 2))
+        {
+            spriteRenderer.color =
+                Color.white;
+        }
+
+        if (target != null)
+        {
+            float distanceToPlayer =
+                Vector2.Distance(
+                    transform.position,
+                    target.position
+                );
+
+            if (distanceToPlayer <=
+                meleeAttackRadius)
+            {
+                Debug.Log(
+                    "보스 근접 타격 성공!"
+                );
+            }
+        }
+
+        yield return
+            new WaitForSeconds(
+                0.5f /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                )
+            );
+
+        if (currentState != BossState.Dead)
+            currentState =
+                BossState.Move;
+    }
+
+
+    // =========================================================
+    // Boss1 스킬
+    // =========================================================
+
+    IEnumerator Pattern_CerberusSkills()
+    {
+        currentState =
+            BossState.Attack_Ranged;
+
+        lastRangedAttackTime =
+            Time.time;
+
+        int patternType =
+            Random.Range(0, 3);
+
+        if (patternType == 0 &&
+            fireBallPrefab != null)
+        {
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    new Color(
+                        1f,
+                        0.5f,
+                        0f
+                    );
+
+            yield return
+                new WaitForSeconds(
+                    0.5f /
+                    Mathf.Max(
+                        attackSpeed,
+                        0.01f
+                    )
+                );
+
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    Color.white;
+
+            if (firePoints != null)
+            {
+                for (int i = 0;
+                     i < firePoints.Length;
+                     i++)
+                {
+                    if (firePoints[i] == null)
+                        continue;
+
+                    Vector2 spawnPos =
+                        firePoints[i].position;
+
+                    Vector2 dirToPlayer =
+                        target != null
+                        ?
+                        (
+                            target.position -
+                            (Vector3)spawnPos
+                        ).normalized
+                        :
+                        Vector2.down;
+
+                    GameObject fireBall =
+                        Instantiate(
+                            fireBallPrefab,
+                            spawnPos,
+                            Quaternion.identity
+                        );
+
+                    Rigidbody2D rb =
+                        fireBall.GetComponent<Rigidbody2D>();
+
+                    if (rb != null)
+                    {
+                        rb.linearVelocity =
+                            dirToPlayer * 6f;
+                    }
+                }
+            }
+        }
+        else if (patternType == 1 &&
+                 lightningPrefab != null)
+        {
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    new Color(
+                        0.3f,
+                        0.5f,
+                        1f
+                    );
+
+            yield return
+                new WaitForSeconds(
+                    0.5f /
+                    Mathf.Max(
+                        attackSpeed,
+                        0.01f
+                    )
+                );
+
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    Color.white;
+
+            if (firePoints != null)
+            {
+                for (int i = 0;
+                     i < firePoints.Length;
+                     i++)
+                {
+                    if (firePoints[i] == null)
+                        continue;
+
+                    Instantiate(
+                        lightningPrefab,
+                        firePoints[i].position,
+                        Quaternion.identity
+                    );
+
+                    yield return
+                        new WaitForSeconds(0.15f);
+                }
+            }
+        }
+        else
+        {
+            yield return
+                StartCoroutine(
+                    Pattern_CerberusJumpAttack()
+                );
+        }
+
+        yield return
+            new WaitForSeconds(
+                0.6f /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                )
+            );
+
+        if (currentState != BossState.Dead)
+            currentState =
+                BossState.Move;
+    }
+
+
+    // =========================================================
+    // Boss1 점프
+    // =========================================================
+
+    IEnumerator Pattern_CerberusJumpAttack()
+    {
+        if (target == null)
+            yield break;
+
+        if (animator != null)
+            animator.SetTrigger("DoJump");
+
+        yield return
+            new WaitForSeconds(
+                0.4f /
+                Mathf.Max(
+                    attackSpeed,
+                    0.01f
+                )
+            );
+
+        Vector3 startPos =
+            transform.position;
+
+        lastLandingPosition =
+            target.position;
+
+        float timer = 0f;
+
+        float jumpDuration =
+            0.5f /
+            Mathf.Max(
+                attackSpeed,
+                0.01f
+            );
+
+        while (timer < jumpDuration)
+        {
+            timer += Time.deltaTime;
+
+            transform.position =
+                Vector3.Lerp(
+                    startPos,
+                    lastLandingPosition,
+                    timer / jumpDuration
+                );
+
+            yield return null;
+        }
+
+        if (animator != null)
+            animator.SetTrigger("Land");
+
+        float distanceToPlayer =
+            Vector2.Distance(
+                transform.position,
+                target.position
+            );
+
+        if (distanceToPlayer <=
+            jumpAttackRadius)
+        {
+            ApplyDebuff(
+                target.gameObject
+            );
+        }
+
+        yield return
+            new WaitForSeconds(0.4f);
+    }
+
+
+    // =========================================================
+    // Boss1 용암
+    // =========================================================
+
+    public void SpawnLava()
+    {
+        if (lavaPrefab == null)
+            return;
+
+        GameObject lava =
+            Instantiate(
+                lavaPrefab,
+                lastLandingPosition,
+                Quaternion.identity
+            );
+
+        lava.transform.localScale =
+            new Vector3(
+                3f,
+                3f,
+                1f
+            );
+
+        StartCoroutine(
+            LavaRoutine(lava)
         );
     }
 
-    // 외부(무기 등)에서 데미지를 줄 때 호출하는 함수
-    public void TakeDamage(float incomingDamage)
+
+    IEnumerator LavaRoutine(GameObject lava)
     {
-        if (currentState == BossState.Appearance) return;
+        float elapsed = 0f;
 
-        float finalDamage = incomingDamage - defense;
-        if (finalDamage < 1f) finalDamage = 1f;
+        Animator lavaAnim =
+            lava.GetComponent<Animator>();
 
-        currentHealth -= finalDamage;
+        while (elapsed < lavaDuration &&
+               lava != null)
+        {
+            if (target != null)
+            {
+                float distToPlayer =
+                    Vector2.Distance(
+                        lava.transform.position,
+                        target.position
+                    );
+
+                if (distToPlayer <= lavaRadius)
+                {
+                    Debug.Log(
+                        $"용암 장판 도트 데미지 적용: {lavaDamage}"
+                    );
+                }
+            }
+
+            elapsed += 1f;
+
+            yield return
+                new WaitForSeconds(1f);
+        }
+
+        if (lava != null)
+        {
+            if (lavaAnim != null)
+                lavaAnim.SetTrigger("DoEnd");
+
+            yield return
+                new WaitForSeconds(0.5f);
+
+            Destroy(lava);
+        }
+    }
+
+
+    void ApplyDebuff(GameObject targetObj)
+    {
+        Debug.Log(
+            $"이동속도 {slowDebuffAmount * 100f}% 감소 디버프 적용!"
+        );
+    }
+
+
+    // =========================================================
+    // 원거리 공격
+    // =========================================================
+
+    IEnumerator Pattern_RangedShotgun()
+    {
+        currentState =
+            BossState.Attack_Ranged;
+
+        lastRangedAttackTime =
+            Time.time;
+
+
+        // =====================================================
+        // Boss2
+        // =====================================================
+
+        if (bossType == BossType.Boss2)
+        {
+            SetBoss2BodyVisible(
+                boss2Phase == 1
+            );
+
+
+            // ================================================
+            // 1페이지
+            // ================================================
+
+            if (boss2Phase == 1)
+            {
+                yield return
+                    StartCoroutine(
+                        Boss2Phase1Attack()
+                    );
+            }
+
+
+            // ================================================
+            // 2페이지
+            // ================================================
+
+            else if (boss2Phase == 2)
+            {
+                SetBoss2BodyVisible(false);
+
+                yield return
+                    StartCoroutine(
+                        Boss2Phase2Attack()
+                    );
+            }
+
+
+            // ================================================
+            // 3페이지
+            // ================================================
+
+            else if (boss2Phase == 3)
+            {
+                SetBoss2BodyVisible(false);
+
+                yield return
+                    StartCoroutine(
+                        Boss2Phase3Attack()
+                    );
+            }
+
+            if (currentState != BossState.Dead)
+                currentState =
+                    BossState.Move;
+
+            yield break;
+        }
+
+
+        // =====================================================
+        // Boss3
+        // =====================================================
+
+        if (bossType == BossType.Boss3)
+        {
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    new Color(
+                        0.5f,
+                        0f,
+                        0.5f
+                    );
+
+            yield return
+                new WaitForSeconds(
+                    0.8f /
+                    Mathf.Max(
+                        attackSpeed,
+                        0.01f
+                    )
+                );
+
+            if (spriteRenderer != null)
+                spriteRenderer.color =
+                    Color.white;
+
+            if (currentState != BossState.Dead)
+                currentState =
+                    BossState.Move;
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 버프 스킬 시작
+    // =========================================================
+
+    void StartBoss2BuffSkill()
+    {
+        if (bossType != BossType.Boss2)
+            return;
+
+        if (!useBuffSkill)
+            return;
+
+        if (buffSkillPrefab == null)
+        {
+            Debug.LogWarning(
+                "[Boss2] 버프 스킬 프리팹이 지정되지 않았습니다."
+            );
+
+            return;
+        }
+
+        if (buffSkillRoutine != null)
+            return;
+
+        buffSkillRoutine =
+            StartCoroutine(
+                Boss2BuffSkillRoutine()
+            );
+    }
+
+
+    // =========================================================
+    // Boss2 버프 스킬
+    // =========================================================
+
+    IEnumerator Boss2BuffSkillRoutine()
+    {
+        activeBuffSkill =
+            Instantiate(
+                buffSkillPrefab,
+                transform.position,
+                Quaternion.identity,
+                transform
+            );
+
+        float elapsed = 0f;
+
+        float safeTick =
+            Mathf.Max(
+                buffTickInterval,
+                0.05f
+            );
+
+
+        // =====================================================
+        // 버프 작동
+        // =====================================================
+
+        while (currentState != BossState.Dead)
+        {
+            // -------------------------------------------------
+            // 2 / 3페이지 상시 버프
+            // -------------------------------------------------
+
+            if (boss2PersistentBuff)
+            {
+                // 지속시간 제한 없음
+            }
+            else
+            {
+                // 1페이지
+                if (elapsed >= buffSkillDuration)
+                    break;
+            }
+
+
+            // -------------------------------------------------
+            // 보스 회복
+            // ★ 초당 회복량을 Tick 간격에 맞게 계산
+            // -------------------------------------------------
+
+            if (buffHealPerSecond > 0f)
+            {
+                float healAmount =
+                    buffHealPerSecond * safeTick;
+
+                HealFromAura(healAmount);
+
+                Debug.Log(
+                    $"<color=lime>" +
+                    "[Boss2 버프 스킬]" +
+                    "</color> " +
+                    $"보스 회복 +{healAmount:F1}"
+                );
+            }
+
+
+            // -------------------------------------------------
+            // 플레이어 피해
+            // -------------------------------------------------
+
+            if (GameManager.instance != null &&
+                GameManager.instance.player != null)
+            {
+                Transform player =
+                    GameManager.instance.player.transform;
+
+                float distance =
+                    Vector2.Distance(
+                        transform.position,
+                        player.position
+                    );
+
+                if (distance <= buffSkillRange)
+                {
+                    PlayerHealth playerHealth =
+                        player.GetComponent<PlayerHealth>();
+
+                    if (playerHealth != null &&
+                        buffDamagePerSecond > 0f)
+                    {
+                        float damageAmount =
+                            buffDamagePerSecond * safeTick;
+
+                        playerHealth.TakeBossBodyDamage(
+                            damageAmount
+                        );
+
+                        Debug.Log(
+                            $"<color=red>" +
+                            "[Boss2 버프 스킬]" +
+                            "</color> " +
+                            $"사거리 {buffSkillRange:F1}m | " +
+                            $"플레이어 피해 {damageAmount:F1}"
+                        );
+                    }
+                }
+            }
+
+
+            // -------------------------------------------------
+            // 대기
+            // -------------------------------------------------
+
+            yield return
+                new WaitForSeconds(
+                    safeTick
+                );
+
+            elapsed += safeTick;
+        }
+
+
+        // =====================================================
+        // 버프 프리팹 삭제
+        // =====================================================
+
+        DestroyActiveBuffSkill();
+
+        buffSkillRoutine = null;
+
+        lastBuffSkillTime =
+            Time.time;
+    }
+
+
+    // =========================================================
+    // 버프 프리팹 제거
+    // =========================================================
+
+    void DestroyActiveBuffSkill()
+    {
+        if (activeBuffSkill != null)
+        {
+            Destroy(
+                activeBuffSkill
+            );
+
+            activeBuffSkill = null;
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 모든 효과 제거
+    // =========================================================
+
+    void StopAllBoss2Effects()
+    {
+        boss2PersistentBuff = false;
+
+        DestroyActiveBuffSkill();
+
+        if (activeSlashObject != null)
+        {
+            Destroy(
+                activeSlashObject
+            );
+
+            activeSlashObject = null;
+        }
+
+        if (activeSkillObject != null)
+        {
+            Destroy(
+                activeSkillObject
+            );
+
+            activeSkillObject = null;
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 1페이지
+    // 버프 + 슬래시 → 딜레이 → 참격
+    // =========================================================
+
+    IEnumerator Boss2Phase1Attack()
+    {
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = true;
+
+
+        // =====================================================
+        // 1페이지 버프
+        // =====================================================
+
+        boss2PersistentBuff = false;
+
+        StartBoss2BuffSkill();
+
+
+        // =====================================================
+        // 슬래시 애니메이션
+        // =====================================================
+
+        if (animator != null)
+            animator.SetTrigger("doSlash");
+
+
+        // =====================================================
+        // 슬래시 생성
+        // =====================================================
+
+        if (slashPrefab != null)
+        {
+            activeSlashObject =
+                Instantiate(
+                    slashPrefab,
+                    transform.position,
+                    Quaternion.identity,
+                    transform
+                );
+
+            DisableOldSlashSkill(
+                activeSlashObject
+            );
+        }
+
+
+        // =====================================================
+        // 참격 시작 딜레이
+        // =====================================================
+
+        if (phase1SlashDelay > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    phase1SlashDelay
+                );
+        }
+
+
+        // =====================================================
+        // 참격 발사
+        // =====================================================
+
+        if (phase1ProjectilePrefab != null)
+        {
+            StartCoroutine(
+                FireProjectilePattern(
+                    phase1ProjectilePrefab,
+                    phase1SlashDuration,
+                    phase1ShotInterval,
+                    phase1SlashCount,
+                    phase1SlashSpeed,
+                    phase1SpawnDistance
+                )
+            );
+        }
+
+
+        // =====================================================
+        // 주변 피해
+        // =====================================================
+
+        ApplySlashInitialDamage();
+
+        StartCoroutine(
+            SlashDamageOverTime()
+        );
+
+
+        // =====================================================
+        // 슬래시 지속시간
+        // =====================================================
+
+        if (phase1SlashDuration > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    phase1SlashDuration
+                );
+        }
+
+
+        // =====================================================
+        // 슬래시 삭제
+        // =====================================================
+
+        if (activeSlashObject != null)
+        {
+            Destroy(
+                activeSlashObject
+            );
+
+            activeSlashObject = null;
+        }
+
+
+        // =====================================================
+        // 1페이지 버프가 끝난 뒤 다음 사용 대기
+        // =====================================================
+
+        if (buffSkillRoutine == null &&
+            useBuffSkill &&
+            buffSkillPrefab != null &&
+            buffSkillCooldown > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    buffSkillCooldown
+                );
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 2페이지
+    // 버프 상시 + 참격 지속시간 → 쿨타임
+    // =========================================================
+
+    IEnumerator Boss2Phase2Attack()
+    {
+        SetBoss2BodyVisible(false);
+
+
+        // =====================================================
+        // 2페이지 버프 상시 유지
+        // =====================================================
+
+        boss2PersistentBuff = true;
+
+        StartBoss2BuffSkill();
+
+
+        // =====================================================
+        // 참격 지속시간 동안 발사
+        // =====================================================
+
+        yield return
+            StartCoroutine(
+                FireProjectilePattern(
+                    phase2ProjectilePrefab,
+                    phase2ProjectileDuration,
+                    phase2ShotInterval,
+                    phase2SlashCount,
+                    phase2SlashSpeed,
+                    phase2SpawnDistance
+                )
+            );
+
+
+        // =====================================================
+        // 지속시간 종료 후 쿨타임
+        // =====================================================
+
+        if (phase2ProjectileCooldown > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    phase2ProjectileCooldown
+                );
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 3페이지
+    // 버프 상시 + 기본 참격 + 추가 패턴
+    // =========================================================
+
+    IEnumerator Boss2Phase3Attack()
+    {
+        SetBoss2BodyVisible(false);
+
+
+        // =====================================================
+        // 3페이지 버프 상시 유지
+        // =====================================================
+
+        boss2PersistentBuff = true;
+
+        StartBoss2BuffSkill();
+
+
+        // =====================================================
+        // 추가 슬래시 패턴
+        // =====================================================
+
+        if (usePhase3ExtraSlash &&
+            phase3ExtraSlashPrefab != null &&
+            Time.time >=
+            lastPhase3ExtraSlashTime +
+            phase3ExtraSlashCooldown)
+        {
+            lastPhase3ExtraSlashTime =
+                Time.time;
+
+            StartCoroutine(
+                Boss2Phase3ExtraSlashRoutine()
+            );
+        }
+
+
+        // =====================================================
+        // 기본 참격
+        // =====================================================
+
+        yield return
+            StartCoroutine(
+                FireProjectilePattern(
+                    phase3ProjectilePrefab,
+                    phase3ShotInterval,
+                    phase3ShotInterval,
+                    phase3SlashCount,
+                    phase3SlashSpeed,
+                    phase3SpawnDistance
+                )
+            );
+    }
+
+
+    // =========================================================
+    // 3페이지 추가 슬래시
+    // 슬래시 → 딜레이 → 참격 지속
+    // =========================================================
+
+    IEnumerator Boss2Phase3ExtraSlashRoutine()
+    {
+        if (phase3ExtraSlashPrefab == null)
+            yield break;
+
+
+        // =====================================================
+        // 슬래시 생성
+        // =====================================================
+
+        GameObject extraSlash =
+            Instantiate(
+                phase3ExtraSlashPrefab,
+                transform.position,
+                Quaternion.identity,
+                transform
+            );
+
+        DisableOldSlashSkill(
+            extraSlash
+        );
+
+
+        // =====================================================
+        // 딜레이
+        // =====================================================
+
+        if (phase3ExtraSlashDelay > 0f)
+        {
+            yield return
+                new WaitForSeconds(
+                    phase3ExtraSlashDelay
+                );
+        }
+
+
+        // =====================================================
+        // 참격 발사
+        // =====================================================
+
+        yield return
+            StartCoroutine(
+                FireProjectilePattern(
+                    phase3ExtraProjectilePrefab,
+                    phase3ExtraProjectileDuration,
+                    phase3ExtraShotInterval,
+                    phase3ExtraSlashCount,
+                    phase3ExtraSlashSpeed,
+                    phase3ExtraSpawnDistance
+                )
+            );
+
+
+        // =====================================================
+        // 슬래시 삭제
+        // =====================================================
+
+        if (extraSlash != null)
+            Destroy(extraSlash);
+    }
+
+
+    // =========================================================
+    // 공통 참격 발사
+    // =========================================================
+
+    IEnumerator FireProjectilePattern(
+        GameObject projectilePrefab,
+        float duration,
+        float interval,
+        int count,
+        float projectileSpeed,
+        float spawnDistance)
+    {
+        if (projectilePrefab == null)
+            yield break;
+
+
+        if (duration <= 0f)
+        {
+            FireProjectile(
+                projectilePrefab,
+                count,
+                projectileSpeed,
+                spawnDistance
+            );
+
+            yield break;
+        }
+
+
+        float elapsed = 0f;
+
+        float safeInterval =
+            Mathf.Max(
+                interval,
+                0.01f
+            );
+
+
+        while (elapsed < duration)
+        {
+            if (currentState == BossState.Dead)
+                yield break;
+
+
+            FireProjectile(
+                projectilePrefab,
+                count,
+                projectileSpeed,
+                spawnDistance
+            );
+
+
+            yield return
+                new WaitForSeconds(
+                    safeInterval
+                );
+
+            elapsed += safeInterval;
+        }
+    }
+
+
+    // =========================================================
+    // 참격 실제 생성
+    // =========================================================
+
+    void FireProjectile(
+        GameObject projectilePrefab,
+        int count,
+        float projectileSpeed,
+        float spawnDistance)
+    {
+        if (projectilePrefab == null)
+            return;
+
+
+        int safeCount =
+            Mathf.Max(
+                count,
+                1
+            );
+
+
+        for (int i = 0;
+             i < safeCount;
+             i++)
+        {
+            float randomAngle =
+                Random.Range(
+                    0f,
+                    360f
+                );
+
+
+            float radians =
+                randomAngle *
+                Mathf.Deg2Rad;
+
+
+            Vector2 direction =
+                new Vector2(
+                    Mathf.Cos(radians),
+                    Mathf.Sin(radians)
+                ).normalized;
+
+
+            Vector3 spawnPosition =
+                transform.position +
+                (Vector3)(
+                    direction *
+                    spawnDistance
+                );
+
+
+            Quaternion rotation =
+                Quaternion.Euler(
+                    0f,
+                    0f,
+                    randomAngle
+                );
+
+
+            GameObject projectile =
+                Instantiate(
+                    projectilePrefab,
+                    spawnPosition,
+                    rotation
+                );
+
+
+            Rigidbody2D rb =
+                projectile.GetComponent<Rigidbody2D>();
+
+
+            if (rb != null)
+            {
+                rb.linearVelocity =
+                    direction *
+                    projectileSpeed;
+            }
+        }
+    }
+
+
+    // =========================================================
+    // 기존 Boss2SlashSkill 자동 실행 방지
+    // =========================================================
+
+    void DisableOldSlashSkill(
+        GameObject slashObject)
+    {
+        if (slashObject == null)
+            return;
+
+
+        Boss2SlashSkill oldSkill =
+            slashObject.GetComponent<Boss2SlashSkill>();
+
+
+        if (oldSkill != null)
+            oldSkill.enabled = false;
+    }
+
+
+    // =========================================================
+    // Boss2 본체 표시
+    // =========================================================
+
+    void SetBoss2BodyVisible(
+        bool visible)
+    {
+        if (bossType != BossType.Boss2)
+            return;
+
+
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = visible;
+    }
+
+
+    // =========================================================
+    // Boss2 1페이지 초기 피해
+    // =========================================================
+
+    void ApplySlashInitialDamage()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.player == null)
+            return;
+
+
+        Transform player =
+            GameManager.instance.player.transform;
+
+
+        float distance =
+            Vector2.Distance(
+                transform.position,
+                player.position
+            );
+
+
+        if (distance <= slashRadius)
+        {
+            PlayerHealth playerHealth =
+                player.GetComponent<PlayerHealth>();
+
+
+            if (playerHealth != null)
+            {
+                playerHealth.TakeBossBodyDamage(
+                    slashInitialDamage
+                );
+
+
+                Debug.Log(
+                    $"<color=red>" +
+                    $"[Boss2 주변 참격]" +
+                    $"</color> 초기 피해 " +
+                    $"{slashInitialDamage} 적용!"
+                );
+            }
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 1페이지 지속 피해
+    // =========================================================
+
+    IEnumerator SlashDamageOverTime()
+    {
+        float elapsed = 0f;
+
+
+        while (elapsed < slashDamageDuration)
+        {
+            yield return
+                new WaitForSeconds(
+                    slashTickInterval
+                );
+
+
+            elapsed += slashTickInterval;
+
+
+            if (GameManager.instance == null ||
+                GameManager.instance.player == null)
+                continue;
+
+
+            Transform player =
+                GameManager.instance.player.transform;
+
+
+            float distance =
+                Vector2.Distance(
+                    transform.position,
+                    player.position
+                );
+
+
+            if (distance <= slashRadius)
+            {
+                PlayerHealth playerHealth =
+                    player.GetComponent<PlayerHealth>();
+
+
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeBossBodyDamage(
+                        slashDamagePerSecond
+                    );
+
+
+                    Debug.Log(
+                        $"<color=orange>" +
+                        $"[Boss2 주변 참격]" +
+                        $"</color> 지속 피해 " +
+                        $"{slashDamagePerSecond} 적용!"
+                    );
+                }
+            }
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 기존 스킬 삭제
+    // =========================================================
+
+    void HideBoss2OldVisuals()
+    {
+        if (activeSlashObject != null)
+        {
+            Destroy(
+                activeSlashObject
+            );
+
+            activeSlashObject = null;
+        }
+
+
+        if (activeSkillObject != null)
+        {
+            Destroy(
+                activeSkillObject
+            );
+
+            activeSkillObject = null;
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 폼체인지
+    // =========================================================
+
+    void ChangeBoss2Form(
+        int phase)
+    {
+        if (bossType != BossType.Boss2)
+            return;
+
+
+        // =====================================================
+        // 모든 폼 OFF
+        // =====================================================
+
+        if (phase2Form != null)
+            phase2Form.SetActive(false);
+
+        if (phase3Form != null)
+            phase3Form.SetActive(false);
+
+
+        // =====================================================
+        // 기존 공격 이펙트 제거
+        // =====================================================
+
+        HideBoss2OldVisuals();
+
+
+        // =====================================================
+        // 1페이지
+        // =====================================================
+
+        if (phase == 1)
+        {
+            SetBoss2BodyVisible(true);
+
+            boss2PersistentBuff = false;
+
+            return;
+        }
+
+
+        // =====================================================
+        // 2페이지
+        // =====================================================
+
+        if (phase == 2)
+        {
+            SetBoss2BodyVisible(false);
+
+            if (phase2Form != null)
+            {
+                phase2Form.SetActive(true);
+
+                Debug.Log(
+                    "<color=yellow>" +
+                    "[Boss2]</color> " +
+                    "2페이지 폼 활성화!"
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "Boss2 Phase 2 Form이 지정되지 않았습니다."
+                );
+            }
+
+
+            boss2PersistentBuff = true;
+
+            StartBoss2BuffSkill();
+
+            return;
+        }
+
+
+        // =====================================================
+        // 3페이지
+        // =====================================================
+
+        if (phase == 3)
+        {
+            SetBoss2BodyVisible(false);
+
+            if (phase3Form != null)
+            {
+                phase3Form.SetActive(true);
+
+                Debug.Log(
+                    "<color=red>" +
+                    "[Boss2]</color> " +
+                    "3페이지 분노 폼 활성화!"
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "Boss2 Phase 3 Rage Form이 지정되지 않았습니다."
+                );
+            }
+
+
+            boss2PersistentBuff = true;
+
+            StartBoss2BuffSkill();
+        }
+    }
+
+
+    // =========================================================
+    // Boss2 능력치 적용
+    // =========================================================
+
+    void ApplyBoss2PhaseStats(
+        float multiplier,
+        float defenseBonus)
+    {
+        maxHealth =
+            baseMaxHealth *
+            multiplier;
+
+        speed =
+            baseSpeed *
+            multiplier;
+
+        damage =
+            baseDamage *
+            multiplier;
+
+        attackSpeed =
+            baseAttackSpeed *
+            multiplier;
+
+        healthRegenPerSec =
+            baseHealthRegen *
+            multiplier;
+
+        defense =
+            baseDefense +
+            defenseBonus;
+
+        currentHealth =
+            maxHealth;
+
 
         if (hpSlider != null)
         {
-            hpSlider.value = currentHealth;
+            hpSlider.maxValue =
+                maxHealth;
+
+            hpSlider.value =
+                currentHealth;
         }
 
-        Debug.Log($"<color=orange>[보스 피격]</color> 받은 데미지: {finalDamage:F1} | 남은 체력: {currentHealth:F1} / {maxHealth}");
 
-        if (currentHealth <= 0)
+        Debug.Log(
+            $"<color=cyan>" +
+            $"[Boss2 능력치 적용]" +
+            $"</color> " +
+            $"배율 x{multiplier} | " +
+            $"HP {maxHealth} | " +
+            $"방어력 {defense}"
+        );
+    }
+
+
+    // =========================================================
+    // Boss 데미지
+    // =========================================================
+
+    public void TakeDamage(
+        float incomingDamage)
+    {
+        if (currentState ==
+            BossState.Appearance)
+            return;
+
+
+        if (boss2PhaseChanging)
+            return;
+
+
+        float finalDamage =
+            incomingDamage -
+            defense;
+
+
+        if (finalDamage < 1f)
+            finalDamage = 1f;
+
+
+        currentHealth -=
+            finalDamage;
+
+
+        if (hpSlider != null)
+            hpSlider.value =
+                currentHealth;
+
+
+        Debug.Log(
+            $"<color=orange>" +
+            $"[보스 피격]" +
+            $"</color> 받은 데미지: " +
+            $"{finalDamage:F1} | " +
+            $"남은 체력: " +
+            $"{currentHealth:F1} / " +
+            $"{maxHealth}"
+        );
+
+
+        if (currentHealth <= 0f)
         {
-            currentHealth = 0;
-            if (bossType == BossType.Boss3 && !isAwakened) StartCoroutine(AwakenRoutine());
-            else Die();
+            currentHealth = 0f;
+
+
+            // =================================================
+            // Boss3 각성
+            // =================================================
+
+            if (bossType == BossType.Boss3 &&
+                !isAwakened)
+            {
+                StartCoroutine(
+                    AwakenRoutine()
+                );
+
+                return;
+            }
+
+
+            // =================================================
+            // Boss2 페이지 전환
+            // =================================================
+
+            if (bossType == BossType.Boss2)
+            {
+                if (!boss2PhaseChanging)
+                {
+                    StartCoroutine(
+                        Boss2PhaseDeathRoutine()
+                    );
+                }
+
+                return;
+            }
+
+
+            // =================================================
+            // 일반 사망
+            // =================================================
+
+            Die();
         }
     }
+
+
+    // =========================================================
+    // Boss2 페이지 사망
+    // =========================================================
+
+    IEnumerator Boss2PhaseDeathRoutine()
+    {
+        if (boss2PhaseChanging)
+            yield break;
+
+
+        boss2PhaseChanging = true;
+
+
+        // =====================================================
+        // AI 정지
+        // =====================================================
+
+        currentState =
+            BossState.Dead;
+
+
+        // =====================================================
+        // 모든 공격 스킬 제거
+        // =====================================================
+
+        HideBoss2OldVisuals();
+
+
+        // =====================================================
+        // 1페이지 → 2페이지
+        // =====================================================
+
+        if (boss2Phase == 1)
+        {
+            Debug.Log(
+                "<color=yellow>" +
+                "[Boss2]</color> " +
+                "1페이지 종료 → 2페이지!"
+            );
+
+
+            boss2PersistentBuff = false;
+
+            if (buffSkillRoutine != null)
+            {
+                StopCoroutine(
+                    buffSkillRoutine
+                );
+
+                buffSkillRoutine = null;
+            }
+
+            DestroyActiveBuffSkill();
+
+
+            boss2Phase = 2;
+
+
+            ApplyBoss2PhaseStats(
+                phase2BuffMultiplier,
+                phase2DefenseBonus
+            );
+
+
+            ChangeBoss2Form(2);
+
+
+            boss2PhaseChanging = false;
+
+            currentState =
+                BossState.Move;
+
+            StartCoroutine(
+                BossLoop()
+            );
+
+            yield break;
+        }
+
+
+        // =====================================================
+        // 2페이지 → 3페이지
+        // =====================================================
+
+        if (boss2Phase == 2)
+        {
+            Debug.Log(
+                "<color=red>" +
+                "[Boss2]</color> " +
+                "2페이지 종료 → 3페이지 분노!"
+            );
+
+
+            boss2Phase = 3;
+
+
+            ApplyBoss2PhaseStats(
+                phase3BuffMultiplier,
+                phase2DefenseBonus +
+                phase3DefenseBonus
+            );
+
+
+            ChangeBoss2Form(3);
+
+
+            boss2PhaseChanging = false;
+
+            currentState =
+                BossState.Move;
+
+            StartCoroutine(
+                BossLoop()
+            );
+
+            yield break;
+        }
+
+
+        // =====================================================
+        // 3페이지 → 완전 사망
+        // =====================================================
+
+        Debug.Log(
+            "<color=red>" +
+            "[Boss2]</color> " +
+            "3페이지 종료 → 완전 사망!"
+        );
+
+
+        boss2PhaseChanging = false;
+
+
+        Die();
+    }
+
+
+    // =========================================================
+    // Boss3 각성
+    // =========================================================
 
     IEnumerator AwakenRoutine()
     {
         isAwakened = true;
-        currentState = BossState.Dead;
+
+        currentState =
+            BossState.Dead;
+
 
         float timer = 0f;
-        Vector3 originalPos = transform.position;
+
+        Vector3 originalPos =
+            transform.position;
+
+
         while (timer < 2f)
         {
-            transform.position = originalPos + (Vector3)Random.insideUnitCircle * 0.1f;
-            spriteRenderer.color = Color.Lerp(Color.white, Color.red, timer / 2f);
+            transform.position =
+                originalPos +
+                (Vector3)
+                (
+                    Random.insideUnitCircle *
+                    0.1f
+                );
+
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color =
+                    Color.Lerp(
+                        Color.white,
+                        Color.red,
+                        timer / 2f
+                    );
+            }
+
+
             timer += Time.deltaTime;
+
             yield return null;
         }
-        transform.position = originalPos;
 
-        maxHealth *= awakenStatMultiplier;
-        currentHealth = maxHealth;
-        speed *= awakenStatMultiplier;
-        damage *= awakenStatMultiplier;
-        attackSpeed *= awakenStatMultiplier;
-        defense *= awakenStatMultiplier;
-        healthRegenPerSec *= awakenStatMultiplier;
+
+        transform.position =
+            originalPos;
+
+
+        maxHealth *=
+            awakenStatMultiplier;
+
+        currentHealth =
+            maxHealth;
+
+        speed *=
+            awakenStatMultiplier;
+
+        damage *=
+            awakenStatMultiplier;
+
+        attackSpeed *=
+            awakenStatMultiplier;
+
+        defense *=
+            awakenStatMultiplier;
+
+        healthRegenPerSec *=
+            awakenStatMultiplier;
+
 
         if (hpSlider != null)
         {
-            hpSlider.maxValue = maxHealth;
-            hpSlider.value = currentHealth;
+            hpSlider.maxValue =
+                maxHealth;
+
+            hpSlider.value =
+                currentHealth;
         }
+
 
         meleeAttackRange *= 1.3f;
         meleeAttackRadius *= 1.3f;
 
-        if (bossType == BossType.Boss3 && phase2AuraEffect != null)
+
+        if (bossType == BossType.Boss3 &&
+            phase2AuraEffect != null)
         {
             phase2AuraEffect.SetActive(true);
         }
 
-        isPhase2OvertimeBuffActive = true;
-        StartCoroutine(Phase2StatScaling());
 
-        currentState = BossState.Move;
-        StartCoroutine(BossLoop());
+        isPhase2OvertimeBuffActive =
+            true;
+
+
+        StartCoroutine(
+            Phase2StatScaling()
+        );
+
+
+        currentState =
+            BossState.Move;
+
+
+        StartCoroutine(
+            BossLoop()
+        );
     }
-    
+
+
+    // =========================================================
+    // Boss3 지속 성장
+    // =========================================================
+
     IEnumerator Phase2StatScaling()
     {
-        while (currentState != BossState.Dead && isPhase2OvertimeBuffActive)
+        while (
+            currentState != BossState.Dead &&
+            isPhase2OvertimeBuffActive
+        )
         {
-            yield return new WaitForSeconds(5.0f);
+            yield return
+                new WaitForSeconds(5f);
+
             damage *= 1.05f;
+
             speed *= 1.02f;
         }
     }
 
+
+    // =========================================================
+    // Boss3 미니언 생성
+    // =========================================================
+
+    void SpawnMinions()
+    {
+        if (minionPrefab == null)
+            return;
+
+
+        if (spawnPoints == null ||
+            spawnPoints.Length == 0)
+            return;
+
+
+        int spawnCount =
+            Mathf.Min(
+                3,
+                spawnPoints.Length
+            );
+
+
+        for (int i = 0;
+             i < spawnCount;
+             i++)
+        {
+            if (spawnPoints[i] == null)
+                continue;
+
+
+            Instantiate(
+                minionPrefab,
+                spawnPoints[i].position,
+                Quaternion.identity
+            );
+        }
+
+
+        Debug.Log(
+            "<color=cyan>" +
+            "[Boss3]</color> 미니언 생성!"
+        );
+    }
+
+
+    // =========================================================
+    // 완전 사망
+    // =========================================================
+
     void Die()
     {
-        // 🚨 [안전장치] 중복 사망 연출 방지
-        if (currentState == BossState.Dead) return;
-        currentState = BossState.Dead;
+        if (currentState == BossState.Dead &&
+            bossType != BossType.Boss2)
+        {
+            return;
+        }
+
+
+        currentState =
+            BossState.Dead;
+
+
+        // =====================================================
+        // Boss2 모든 스킬 종료
+        // =====================================================
+
+        if (bossType == BossType.Boss2)
+        {
+            boss2PersistentBuff = false;
+
+            if (buffSkillRoutine != null)
+            {
+                StopCoroutine(
+                    buffSkillRoutine
+                );
+
+                buffSkillRoutine = null;
+            }
+
+            DestroyActiveBuffSkill();
+        }
+
+
+        // =====================================================
+        // Boss3 버프 종료
+        // =====================================================
 
         if (isPhase2OvertimeBuffActive)
         {
-            isPhase2OvertimeBuffActive = false;
-            if (phase2AuraEffect != null) phase2AuraEffect.SetActive(false);
+            isPhase2OvertimeBuffActive =
+                false;
+
+            if (phase2AuraEffect != null)
+                phase2AuraEffect.SetActive(false);
         }
 
-        // 🎯 1번 보스(케르베로스) 처치 시 연출
+
+        // =====================================================
+        // Boss1 보상
+        // =====================================================
+
         if (bossType == BossType.Boss1)
         {
-            // 1. 플레이어 레벨을 강제로 5단계 먼저 올려줍니다.
-            GameManager.instance.level += 5;
+            if (GameManager.instance != null)
+            {
+                GameManager.instance.level += 5;
 
-            LevelUp levelUpUI = GameObject.FindAnyObjectByType<LevelUp>();
+                Debug.Log(
+                    "<color=green>" +
+                    "[Boss1 보상]" +
+                    "</color> 플레이어 레벨 +5"
+                );
+            }
+
+
+            LevelUp levelUpUI =
+                GameObject.FindAnyObjectByType<LevelUp>();
+
+
             if (levelUpUI != null)
             {
-                levelUpUI.UnlockItem(6); // 6번 아이템 슬롯 해금
-                levelUpUI.ShowBossReward();        // 5연속 레벨업 선택창 최초 활성화 (여기서 시간 스케일 0 고정됨)
+                levelUpUI.UnlockCouragePower();
+
+                levelUpUI.ShowBossReward();
+
+
+                Debug.Log(
+                    "<color=cyan>" +
+                    "[Boss1 보상]" +
+                    "</color> 아이템 5회 선택!"
+                );
             }
         }
 
-        // =========================================================
-        // 🚨 [누락 방지 핵심 치트 코드]
-        // Destroy(gameObject)를 바로 해버리면 스포너 대기 락이 풀려버립니다!
-        // 보스 오브젝트를 즉시 파괴하지 않고, 렌더러와 충돌체만 투명하게 숨겨둔 뒤
-        // 코루틴(대기 루틴)을 실행해 유저가 아이템 5개를 다 골라 시간(TimeScale)이 1로 복구될 때까지 
-        // 확실하게 기다렸다가 완전히 파괴 처리합니다.
-        // =========================================================
-        StartCoroutine(SafeDestroyRoutine());
+
+        // =====================================================
+        // Boss2 최종 사망
+        // =====================================================
+
+        if (bossType == BossType.Boss2)
+        {
+            HideBoss2OldVisuals();
+
+
+            if (phase2Form != null)
+                phase2Form.SetActive(false);
+
+
+            if (phase3Form != null)
+                phase3Form.SetActive(false);
+
+
+            SetBoss2BodyVisible(false);
+
+
+            GiveBoss2FinalReward();
+        }
+
+
+        // =====================================================
+        // 삭제
+        // =====================================================
+
+        StartCoroutine(
+            SafeDestroyRoutine()
+        );
     }
 
-    // 🚨 보스가 죽은 뒤 레벨업 5번이 다 끝날 때까지 대기해주는 무적의 안전 코루틴
+
+    // =========================================================
+    // Boss2 최종 보상
+    // =========================================================
+
+    void GiveBoss2FinalReward()
+    {
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.level += 5;
+
+
+            Debug.Log(
+                "<color=green>" +
+                "[Boss2 최종 보상]" +
+                "</color> 플레이어 레벨 +5"
+            );
+        }
+
+
+        LevelUp levelUpUI =
+            GameObject.FindAnyObjectByType<LevelUp>();
+
+
+        if (levelUpUI != null)
+        {
+            levelUpUI.ShowBossReward();
+
+
+            Debug.Log(
+                "<color=cyan>" +
+                "[Boss2 최종 보상]" +
+                "</color> 아이템 5회 선택 시작!"
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "LevelUp UI를 찾을 수 없습니다."
+            );
+        }
+    }
+
+
+    // =========================================================
+    // 안전 삭제
+    // =========================================================
+
     IEnumerator SafeDestroyRoutine()
     {
-        // 1. 보스의 몸통 이미지와 부딪히는 히트박스를 꺼서 유령 상태로 만듭니다.
-        GetComponent<SpriteRenderer>().enabled = false;
-        Collider2D bCollider = GetComponentInChildren<Collider2D>();
-        if (bCollider != null) bCollider.enabled = false;
+        SpriteRenderer renderer =
+            GetComponent<SpriteRenderer>();
 
-        // 2. 🚨 유저가 5번 연속 아이템을 다 골라서 유니티 시간이 정상 배속(1f)으로 돌아올 때까지 멈춰서 무조건 대기합니다!
-        yield return new WaitUntil(() => Time.timeScale > 0.1f);
 
-        // 3. 아이템 가챠가 완전히 끝났으므로 유니티 전체 배속을 확실히 풀고 보스를 완전히 삭제합니다.
-        Time.timeScale = 1.0f;
-        Destroy(gameObject); // 이 순간 Spawner 코루틴의 boss == null이 감지되어 다음 웨이브로 넘어갑니다!
+        if (renderer != null)
+            renderer.enabled = false;
+
+
+        Collider2D bCollider =
+            GetComponentInChildren<Collider2D>();
+
+
+        if (bCollider != null)
+            bCollider.enabled = false;
+
+
+        yield return
+            new WaitUntil(
+                () =>
+                    Time.timeScale > 0.1f
+            );
+
+
+        Time.timeScale = 1f;
+
+
+        Destroy(gameObject);
     }
 
-    void OnCollisionStay2D(Collision2D collision)
+
+    // =========================================================
+    // 플레이어 충돌
+    // =========================================================
+
+    void OnCollisionStay2D(
+        Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Player") && currentState != BossState.Appearance)
+        if (collision.gameObject.CompareTag("Player") &&
+            currentState != BossState.Appearance &&
+            currentState != BossState.Dead)
         {
-            PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
+            PlayerHealth playerHealth =
+                collision.gameObject
+                .GetComponent<PlayerHealth>();
+
+
             if (playerHealth != null)
             {
-                playerHealth.TakeBossBodyDamage(damage);
-                Debug.Log($"<color=red>[성공]</color> PlayerHealth 발견! 데미지 {damage} 전달 완료");
+                playerHealth.TakeBossBodyDamage(
+                    damage
+                );
+
+
+                Debug.Log(
+                    $"<color=red>" +
+                    $"[성공]</color> " +
+                    $"PlayerHealth 발견! " +
+                    $"데미지 {damage} 전달 완료"
+                );
             }
             else
             {
-                Debug.LogWarning("⚠️ 플레이어 오브젝트에 PlayerHealth 스크립트가 없습니다!");
+                Debug.LogWarning(
+                    "플레이어 오브젝트에 " +
+                    "PlayerHealth 스크립트가 없습니다!"
+                );
             }
         }
     }
 
+
+    // =========================================================
+    // Gizmos
+    // =========================================================
+
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, meleeAttackRange);
+        Gizmos.color =
+            Color.yellow;
 
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
 
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, jumpAttackRadius);
+        Gizmos.DrawWireSphere(
+            transform.position,
+            meleeAttackRange
+        );
+
+
+        Gizmos.color =
+            Color.red;
+
+
+        Gizmos.DrawWireSphere(
+            transform.position,
+            meleeAttackRadius
+        );
+
+
+        Gizmos.color =
+            Color.cyan;
+
+
+        Gizmos.DrawWireSphere(
+            transform.position,
+            jumpAttackRadius
+        );
+
+
+        // =====================================================
+        // Boss2 버프 범위
+        // =====================================================
+
+        if (bossType == BossType.Boss2)
+        {
+            Gizmos.color =
+                Color.magenta;
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                buffSkillRange
+            );
+        }
     }
 }
