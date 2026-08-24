@@ -127,47 +127,10 @@ public class Boss : MonoBehaviour
 
     void Update()
     {
-        // 1. [체력바 동기화] 스포너가 꽂아준 hpSlider가 존재할 때만 실시간 체력 수치를 동기화합니다.
+        // 1. [체력바 실시간 동기화] 스포너가 꽂아준 hpSlider가 존재할 때만 실시간 체력 수치를 동기화합니다.
         if (hpSlider != null)
         {
             hpSlider.value = currentHealth;
-        }
-
-        // 2. 🚨 [물리 엔진 완전 우회 - 확정 타격 시스템]
-        // 보스 스스로가 씬에 날아다니는 모든 총알/무기(Bullet)들을 직접 찾아냅니다.
-        Bullet[] activeBullets = Object.FindObjectsByType<Bullet>(FindObjectsSortMode.None);
-
-        foreach (Bullet bullet in activeBullets)
-        {
-            if (bullet == null || !bullet.gameObject.activeInHierarchy) continue;
-
-            // 보스 본체(내 위치)와 날아가는 무기 사이의 실제 수학적 거리 좌표를 직접 계산
-            float distance = Vector2.Distance(transform.position, bullet.transform.position);
-
-            // 💡 보스의 거대한 덩치(반지름 2.2m) 안에 무기가 들어왔다면 물리 충돌 무시하고 대미지 강제 집행!
-            if (distance <= 2.2f)
-            {
-                // [대미지 버그 안전장치] 무기 대미지가 0 이하라면 강제로 20f 대미지를 적용합니다.
-                float weaponDamage = bullet.damage <= 0 ? 20f : bullet.damage;
-
-                // 보스 내 자신의 TakeDamage 함수를 직접 실행하여 피를 깎아버립니다!
-                TakeDamage(weaponDamage);
-
-                // 🚨 [시각적 확인용 로그] 유니티 콘솔 창에 강제 타격 완료 로그를 확실하게 띄웁니다.
-                Debug.Log($"<color=#FF00FF>[보스 자체 확정 타격]</color> 무기 감지 완료! 거리: {distance:F2}m | 데미지: {weaponDamage}를 스스로 받았습니다.");
-
-                // 무한 관통 무기(id 0번, 5번)가 아니라면 대미지를 입었으니 해당 무기 오브젝트를 비활성화(소멸) 처리
-                if (bullet.id != 0 && bullet.id != 5)
-                {
-                    bullet.per--;
-                    if (bullet.per < 0)
-                    {
-                        Rigidbody2D bulletRigid = bullet.GetComponent<Rigidbody2D>();
-                        if (bulletRigid != null) bulletRigid.linearVelocity = Vector2.zero;
-                        bullet.gameObject.SetActive(false); // 무기 사라짐
-                    }
-                }
-            }
         }
     }
 
@@ -692,6 +655,11 @@ public class Boss : MonoBehaviour
         }
     }
 
+    public float GetMaxHealth()
+    {
+        return maxHealth;
+    }
+
     public void HealFromAura(float amount)
     {
         if (currentState == BossState.Dead)
@@ -727,14 +695,20 @@ public class Boss : MonoBehaviour
         float finalDamage = incomingDamage - defense;
         if (finalDamage < 1f) finalDamage = 1f;
 
+        Debug.Log(
+            $"<color=orange>[Boss 피해 계산]</color> " +
+            $"들어온 피해: {incomingDamage:F1} | " +
+            $"방어력: {defense:F1} | " +
+            $"최종 피해: {finalDamage:F1} | " +
+            $"현재 HP: {currentHealth:F1} / {maxHealth:F1}"
+        );
+
         currentHealth -= finalDamage;
 
         if (hpSlider != null)
         {
             hpSlider.value = currentHealth;
         }
-
-        Debug.Log($"<color=orange>[보스 피격]</color> 받은 데미지: {finalDamage:F1} | 남은 체력: {currentHealth:F1} / {maxHealth}");
 
         if (currentHealth <= 0)
         {

@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Item", menuName = "Scriptble Object/ItemDate")]
 public class ItemData : ScriptableObject
 {
-    public enum ItemType { Melee, Range, Glove, Shoe, Heal, Health }
+    public enum ItemType { Melee, Range, Glove, Shoe, Heal, Health, BloodHit, HopeOfHope }
 
     [Header("# Main Info")]
     public ItemType itemType;

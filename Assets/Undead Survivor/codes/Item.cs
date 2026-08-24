@@ -4,6 +4,9 @@ using UnityEngine.UI;
 
 public class Item : MonoBehaviour
 {
+    public static float BloodHitRate;
+    public static float HopeOfHopeRate;
+
     public ItemData data;
     public int level;
     public Weapon weapon;
@@ -57,8 +60,9 @@ public class Item : MonoBehaviour
                 textDesc.text = data.itemDesc;
                 break;
 
-            default:
-                textDesc.text = string.Format(data.itemDesc);
+            case ItemData.ItemType.BloodHit:
+            case ItemData.ItemType.HopeOfHope:
+                textDesc.text = string.Format(data.itemDesc, data.damages[level]);
                 break;
         }
     }
@@ -88,6 +92,16 @@ public class Item : MonoBehaviour
                     weapon.LevelUp(nextDamage, nextCount);
                 }
 
+                level++;
+                break;
+
+            case ItemData.ItemType.BloodHit:
+                BloodHitRate = data.damages[level];
+                level++;
+                break;
+
+            case ItemData.ItemType.HopeOfHope:
+                HopeOfHopeRate = data.damages[level];
                 level++;
                 break;
 

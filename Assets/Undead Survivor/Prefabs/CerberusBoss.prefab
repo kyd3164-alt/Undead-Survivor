@@ -285,13 +285,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   bossType: 0
   currentState: 0
-  maxHealth: 180000
+  maxHealth: 18000
   currentHealth: 0
   speed: 10
   damage: 20
   attackSpeed: 1
   defense: 100
-  healthRegenPerSec: 20000
+  healthRegenPerSec: 0
   meleeAttackRange: 3
   meleeAttackRadius: 2
   rangedAttackCooldown: 2
@@ -310,6 +310,11 @@ MonoBehaviour:
   debuffDuration: 2
   slashPrefab: {fileID: 0}
   skillPrefab: {fileID: 0}
+  slashRadius: 4
+  slashInitialDamage: 50
+  slashDamagePerSecond: 10
+  slashTickInterval: 0.5
+  slashDamageDuration: 3
   awakenStatMultiplier: 1.5
   minionPrefab: {fileID: 0}
   spawnPoints:

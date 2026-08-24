@@ -10,21 +10,22 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d21170fff4891204795ccfc4ab6fa090, type: 3}
-  m_Name: Item 6
+  m_Name: Item 8
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
   itemType: 5
-  itemId: 6
-  itemName: "\uC6A9\uAE30\uC758 \uAD8C\uB2A5"
-  itemDesc: "\uCD5C\uB300 \uCCB4\uB825\uC774 {0}% \uC99D\uAC00"
+  itemId: 8
+  itemName: "\uD76C\uB9DD\uC758 \uD638\uD504"
+  itemDesc: "\uB300\uC0C1\uC758 \uCD5C\uB300\uCCB4\uB825\uC758 {0}% \uB9CC\uD07C
+    \uCD94\uAC00\uD53C\uD574"
   itemIcon: {fileID: 5716781707964038201, guid: c5997956445de7b44bcb047e0cbf5634, type: 3}
   baseDamage: 0
   baseCount: 0
   damages:
-  - 150
-  - 150
-  - 150
-  - 150
-  - 300
+  - 0.3
+  - 0.6
+  - 0.9
+  - 1.2
+  - 1.5
   counts: 
   projectile: {fileID: 0}
   hand: {fileID: 0}
