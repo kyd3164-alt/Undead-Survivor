@@ -285,13 +285,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   bossType: 0
   currentState: 0
-  maxHealth: 18000
+  maxHealth: 180000
   currentHealth: 0
   speed: 10
   damage: 20
   attackSpeed: 1
   defense: 100
-  healthRegenPerSec: 0
+  healthRegenPerSec: 100
   meleeAttackRange: 3
   meleeAttackRadius: 2
   rangedAttackCooldown: 2

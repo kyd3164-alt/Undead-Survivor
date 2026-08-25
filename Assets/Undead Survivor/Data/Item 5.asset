@@ -20,11 +20,11 @@ MonoBehaviour:
   baseDamage: 7
   baseCount: 1
   damages:
-  - 10
-  - 15
-  - 20
-  - 25
-  - 30
+  - 100
+  - 150
+  - 200
+  - 250
+  - 300
   counts: 0100000001000000030000000300000004000000
   projectile: {fileID: 4289304490448370027, guid: b19a2b5b410beb14b9f5849dad596528, type: 3}
   hand: {fileID: 0}

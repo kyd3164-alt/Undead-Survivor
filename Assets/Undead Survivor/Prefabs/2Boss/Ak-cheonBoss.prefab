@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: -6278489079321865258}
   m_Layer: 8
   m_Name: Ak-cheonBoss
-  m_TagString: Boss
+  m_TagString: 2_Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -173,13 +173,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   bossType: 1
   currentState: 0
-  maxHealth: 40000
+  maxHealth: 400000
   currentHealth: 0
   speed: 15
   damage: 40
   attackSpeed: 1
-  defense: 100
-  healthRegenPerSec: 100
+  defense: 50
+  healthRegenPerSec: 1000
   meleeAttackRange: 3
   meleeAttackRadius: 2
   rangedAttackCooldown: 5

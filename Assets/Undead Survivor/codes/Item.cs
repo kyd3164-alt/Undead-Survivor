@@ -6,6 +6,7 @@ public class Item : MonoBehaviour
 {
     public static float BloodHitRate;
     public static float HopeOfHopeRate;
+    public static float PoisonRate;
 
     public ItemData data;
     public int level;
@@ -62,7 +63,8 @@ public class Item : MonoBehaviour
 
             case ItemData.ItemType.BloodHit:
             case ItemData.ItemType.HopeOfHope:
-                textDesc.text = string.Format(data.itemDesc, data.damages[level]);
+            case ItemData.ItemType.Poison:
+                textDesc.text = string.Format(data.itemDesc, data.damages[level] * 100);
                 break;
         }
     }
@@ -102,6 +104,11 @@ public class Item : MonoBehaviour
 
             case ItemData.ItemType.HopeOfHope:
                 HopeOfHopeRate = data.damages[level];
+                level++;
+                break;
+
+            case ItemData.ItemType.Poison:
+                PoisonRate = data.damages[level];
                 level++;
                 break;
 

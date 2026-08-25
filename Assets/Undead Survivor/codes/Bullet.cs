@@ -8,9 +8,23 @@ public class Bullet : MonoBehaviour
 
     Rigidbody2D rigid;
 
-    // 같은 총알이 같은 보스에게 여러 프레임 동안
-    // 계속 피해를 주는 것을 방지
+    // =========================================================
+    // 일반 발사체용
+    // =========================================================
+
+    // 일반 발사체는 한 Bullet이 같은 Boss를
+    // 여러 번 공격하지 못하도록 사용
     bool hitBoss = false;
+
+    // =========================================================
+    // 삽 / 낫용
+    // =========================================================
+
+    // 회전 속도에 따라 계산된 공격 간격
+    float spinHitInterval = 0f;
+
+    // 다음 공격이 가능한 시간
+    float nextSpinHitTime = 0f;
 
     void Awake()
     {
@@ -18,129 +32,278 @@ public class Bullet : MonoBehaviour
     }
 
     // =========================================================
-    // 보스 확정 타격 시스템
+    // Bullet 초기화
     // =========================================================
 
-    void Update()
-    {
-        // 이미 이 총알이 보스를 한 번 맞췄다면
-        // 다시 피해를 주지 않음
-        if (hitBoss)
-            return;
-
-        // Boss 컴포넌트를 가진 보스를 직접 찾음
-        Boss targetBoss = Object.FindFirstObjectByType<Boss>();
-
-        if (targetBoss != null)
-        {
-            Debug.Log(
-                $"[Bullet 테스트] Boss 발견! " +
-                $"상태: {targetBoss.currentState}"
-            );
-
-            // 총알/무기의 현재 위치와 보스 본체의 현재 위치 사이의 절대적인 수학적 거리 좌표 계산
-            float distance = Vector2.Distance(transform.position, targetBoss.transform.position);
-
-            Debug.Log(
-                $"[Bullet 테스트] 총알-보스 거리: {distance:F2}"
-            );
-
-            // 💡 현재 화면을 보니 보스 덩치가 매우 큽니다. 거리를 2.5m로 넉넉하게 확장하여 스치기만 해도 맞게 세팅합니다!
-            if (distance <= 2.5f)
-            {
-                // ==========================================
-                // 희망의 호프 추가 피해
-                // ==========================================
-
-                float hopeDamage = targetBoss.GetMaxHealth() * (Item.HopeOfHopeRate / 100f);
-
-                // 최종 피해
-                float totalDamage = damage + hopeDamage;
-
-                Debug.Log(
-                    $"<color=red>[Bullet → Boss]</color> " +
-                    $"TakeDamage 호출! " +
-                    $"최종 데미지: {totalDamage:F1}"
-                );
-
-                // 보스에게 피해
-                targetBoss.TakeDamage(totalDamage);
-
-                // ★ 같은 총알이 같은 보스를 계속 공격하지 못하도록 기록
-                hitBoss = true;
-
-                Debug.Log(
-                    $"<color=yellow>[최종 타격]</color> " +
-                    $"거리: {distance:F2}m | " +
-                    $"기본 피해: {damage:F1} | " +
-                    $"희망의 호프: {hopeDamage:F1} | " +
-                    $"최종 피해: {totalDamage:F1}"
-                );
-
-                // 무한 관통 무기(id 0번, 5번)가 아니라면 대미지를 줬으니 총알 소멸 처리
-                if (id != 0 && id != 5)
-                {
-                    per--;
-                    if (per < 0)
-                    {
-                        if (rigid != null) rigid.linearVelocity = Vector2.zero;
-                        gameObject.SetActive(false);
-                    }
-                }
-            }
-        }
-    }
-
-
-    public void Init(float damage, int per, Vector3 dir, int id = 0)
+    public void Init(float damage, int per, Vector3 dir, int id = 0, float spinHitInterval = 0f)
     {
         this.damage = damage;
         this.per = per;
         this.id = id;
 
-        // 오브젝트 풀에서 재사용될 때
-        // 다시 보스를 공격할 수 있도록 초기화
+        // 오브젝트 풀 재사용 시 반드시 초기화
         hitBoss = false;
 
+        // 삽 / 낫 공격 간격
+        this.spinHitInterval = spinHitInterval;
+
+        // 즉시 공격 가능
+        nextSpinHitTime = 0f;
+
+        Debug.Log(
+            $"<color=cyan>[Bullet Init]</color> " +
+            $"ID: {id} | " +
+            $"damage: {damage:F1} | " +
+            $"per: {per} | " +
+            $"SpinInterval: {spinHitInterval:F3}"
+        );
+
+        // 일반 발사체 이동
         if (per >= 0)
         {
             rigid.linearVelocity = dir * 15f;
         }
-    }
-
-    void OnTriggerEnter2D(Collider2D collision)
-    {
-        // Boss의 피해 처리는 Update()에서 처리합니다.
-        // 따라서 여기서는 Boss에 대한 피해 처리를 하지 않습니다.
-
-        // Enemy도 아니고 Boss도 아니면 무시
-        if ((!collision.CompareTag("Enemy") && !collision.CompareTag("Boss")) || per == -100)
-            return;
-
-        // Boss는 Update()에서 이미 처리하므로 여기서는 종료
-        if (collision.CompareTag("Boss"))
-            return;
-
-        // 여기부터는 기존 관통 처리
-        if (id == 0 || id == 5)
-            return;
-
-        per--;
-
-        if (per < 0)
+        else
         {
-            if (rigid != null)
-                rigid.linearVelocity = Vector2.zero;
-            
-            gameObject.SetActive(false);
+            // 삽 / 낫은 회전 위치에 있으므로
+            // 이동하지 않음
+            rigid.linearVelocity =
+                Vector2.zero;
         }
     }
 
-    void OnTriggerExit2D(Collider2D collision)
+    // =========================================================
+    // Trigger Enter
+    // =========================================================
+
+    void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!collision.CompareTag("Area") || per == -100)
+        // =========================================================
+        // Boss
+        // =========================================================
+
+        if (IsBoss(collision))
+        {
+            HitBoss(collision);
+            return;
+        }
+
+        // =========================================================
+        // Enemy
+        // =========================================================
+
+        if (collision.CompareTag("Enemy"))
+        {
+            // 삽 / 낫
+            // 무한 관통이므로 Enemy 충돌로 사라지지 않음
+            if (per == -100)
+                return;
+
+            // 기존 무한 관통 무기
+            if (id == 0 || id == 5)
+                return;
+
+            per--;
+
+            if (per < 0)
+            {
+                DisableBullet();
+            }
+
+            return;
+        }
+
+        // =========================================================
+        // Area
+        // =========================================================
+
+        if (collision.CompareTag("Area") && per != -100)
+        {
+            DisableBullet();
+        }
+    }
+
+    // =========================================================
+    // Trigger Stay
+    //
+    // 삽 / 낫이 Boss 안에 계속 들어가 있을 때
+    // 회전 속도에 따라 다시 공격하기 위해 필요
+    // =========================================================
+
+    void OnTriggerStay2D(Collider2D collision)
+    {
+        if (!IsBoss(collision))
             return;
 
+        // 삽 / 낫만 사용
+        if (id != 0 && id != 5)
+            return;
+
+        HitBoss(collision);
+    }
+
+    // =========================================================
+    // Boss Tag 확인
+    // =========================================================
+
+    bool IsBoss(Collider2D collision)
+    {
+        return
+            collision.CompareTag("1_Boss") ||
+            collision.CompareTag("2_Boss") ||
+            collision.CompareTag("3_Boss");
+    }
+
+    // =========================================================
+    // Boss 공격
+    // =========================================================
+
+    void HitBoss(Collider2D collision)
+    {
+        // -----------------------------------------------------
+        // 삽 / 낫이 아닌 일반 발사체
+        // -----------------------------------------------------
+
+        if (id != 0 && id != 5)
+        {
+            // 이미 같은 Bullet이 Boss를 때렸다면
+            // 다시 공격하지 않음
+            if (hitBoss)
+                return;
+        }
+
+        // -----------------------------------------------------
+        // 삽 / 낫
+        // -----------------------------------------------------
+
+        else
+        {
+            // 회전 속도에 따른 공격 간격
+            if (Time.time < nextSpinHitTime)
+                return;
+        }
+
+        // -----------------------------------------------------
+        // Boss 컴포넌트 찾기
+        // -----------------------------------------------------
+
+        Boss boss =
+            collision.GetComponent<Boss>();
+
+        // Boss Collider가 자식에 있는 경우
+        if (boss == null)
+        {
+            boss =
+                collision.GetComponentInParent<Boss>();
+        }
+
+        if (boss == null)
+        {
+            Debug.LogWarning(
+                $"[Bullet] Boss 태그는 찾았지만 " +
+                $"Boss 컴포넌트를 찾지 못함: " +
+                $"{collision.name}"
+            );
+
+            return;
+        }
+
+        // =====================================================
+        // 삽 / 낫 공격 타이밍 설정
+        // =====================================================
+
+        if (id == 0 || id == 5)
+        {
+            // 다음 공격 가능 시간 설정
+            nextSpinHitTime =
+                Time.time +
+                spinHitInterval;
+        }
+
+        // =====================================================
+        // 희망의 호프
+        // =====================================================
+
+        float hopeDamage =
+            boss.GetMaxHealth() *
+            (Item.HopeOfHopeRate / 100f);
+
+        float totalDamage =
+            damage +
+            hopeDamage;
+
+        Debug.Log(
+            $"<color=yellow>[Bullet → Boss 충돌]</color> " +
+            $"ID: {id} | " +
+            $"기본 피해: {damage:F1} | " +
+            $"희망의 호프: {hopeDamage:F1} | " +
+            $"총 피해: {totalDamage:F1}"
+        );
+
+        // =====================================================
+        // Boss 실제 피해
+        // =====================================================
+
+        boss.TakeDamage(
+            totalDamage,
+            Item.PoisonRate
+        );
+
+        // =====================================================
+        // 일반 발사체
+        // =====================================================
+
+        if (id != 0 && id != 5)
+        {
+            // 같은 Bullet은 다시 Boss 공격 불가
+            hitBoss = true;
+
+            // 무한 관통 무기가 아니라면
+            // 기존 방식대로 관통 횟수 감소
+            per--;
+
+            if (per < 0)
+            {
+                DisableBullet();
+            }
+        }
+
+        // =====================================================
+        // 삽 / 낫
+        // =====================================================
+
+        else
+        {
+            // 삽 / 낫은 계속 회전하므로
+            // Bullet을 비활성화하지 않음
+        }
+    }
+
+    // =========================================================
+    // Bullet 비활성화
+    // =========================================================
+
+    void DisableBullet()
+    {
+        if (rigid != null)
+        {
+            rigid.linearVelocity =
+                Vector2.zero;
+        }
+
         gameObject.SetActive(false);
+    }
+
+    // =========================================================
+    // Area 밖으로 나감
+    // =========================================================
+
+    void OnTriggerExit2D(Collider2D collision)
+    {
+        if (!collision.CompareTag("Area") ||
+            per == -100)
+            return;
+
+        DisableBullet();
     }
 }

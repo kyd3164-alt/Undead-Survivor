@@ -688,22 +688,50 @@ public class Boss : MonoBehaviour
     }
 
     // 외부(무기 등)에서 데미지를 줄 때 호출하는 함수
-    public void TakeDamage(float incomingDamage)
+    public void TakeDamage(float incomingDamage, float poisonRate = 0f)
     {
         if (currentState == BossState.Appearance) return;
 
-        float finalDamage = incomingDamage - defense;
+        // 카사르탄의 독기 방어력 관통
+        float effectiveDefense = defense * (1f - poisonRate / 100f);
+
+        float finalDamage = incomingDamage - effectiveDefense;
+        
         if (finalDamage < 1f) finalDamage = 1f;
 
         Debug.Log(
             $"<color=orange>[Boss 피해 계산]</color> " +
             $"들어온 피해: {incomingDamage:F1} | " +
-            $"방어력: {defense:F1} | " +
+            $"기본 방어력: {defense:F1} | " +
+            $"독기 관통: {poisonRate:F1}% | " +
+            $"적용 방어력: {effectiveDefense:F1} | " +
             $"최종 피해: {finalDamage:F1} | " +
             $"현재 HP: {currentHealth:F1} / {maxHealth:F1}"
         );
 
         currentHealth -= finalDamage;
+
+        // ==========================================
+        // 🩸 블러드 히트
+        // ==========================================
+        if (Item.BloodHitRate > 0f)
+        {
+            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+
+            if (playerHealth != null)
+            {
+                float healAmount = finalDamage * Item.BloodHitRate;
+
+                playerHealth.Heal(healAmount);
+
+                Debug.Log(
+                    $"<color=green>[블러드 히트]</color> " +
+                    $"Boss 피해: {finalDamage:F1} | " +
+                    $"흡혈률: {Item.BloodHitRate * 100f:F1}% | " +
+                    $"회복량: {healAmount:F1}"
+                );
+            }
+        }
 
         if (hpSlider != null)
         {
@@ -713,6 +741,7 @@ public class Boss : MonoBehaviour
         if (currentHealth <= 0)
         {
             currentHealth = 0;
+
             if (bossType == BossType.Boss3 && !isAwakened) StartCoroutine(AwakenRoutine());
             else Die();
         }

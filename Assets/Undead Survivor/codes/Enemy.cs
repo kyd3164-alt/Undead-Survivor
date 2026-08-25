@@ -92,7 +92,32 @@ public class Enemy : MonoBehaviour
 
         if (bullet != null)
         {
+            // 실제 적에게 들어가는 피해
+            float finalDamage = bullet.damage;
+
             health -= bullet.damage;
+
+            // ==========================================
+            // 🩸 블러드 히트
+            // ==========================================
+            if (Item.BloodHitRate > 0f)
+            {
+                PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+
+                if (playerHealth != null)
+                {
+                    float healAmount = finalDamage * Item.BloodHitRate;
+
+                    playerHealth.Heal(healAmount);
+
+                    Debug.Log(
+                        $"<color=green>[블러드 히트]</color> " +
+                        $"Enemy 피해: {finalDamage:F1} | " +
+                        $"흡혈률: {Item.BloodHitRate * 100f:F1}% | " +
+                        $"회복량: {healAmount:F1}"
+                    );
+                }
+            }
         }
 
         StartCoroutine(KnockBack());
