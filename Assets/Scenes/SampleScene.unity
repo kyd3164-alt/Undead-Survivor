@@ -6350,6 +6350,7 @@ MonoBehaviour:
   id: 0
   damage: 10000000
   per: -1
+  lifeTime: 3
 --- !u!61 &360894543
 BoxCollider2D:
   m_ObjectHideFlags: 0

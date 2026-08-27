@@ -224,7 +224,7 @@ public class Weapon : MonoBehaviour
             // → 회전 속도에 따른 공격 간격
             // -------------------------------------------------
 
-            bullet.GetComponent<Bullet>().Init(damage, -100, Vector3.zero, id); // -100 is Infinity Per.
+            bullet.GetComponent<Bullet>().Init(damage, -100, Vector3.zero, id, spinHitInterval); // -100 is Infinity Per.
         }
     }
 
@@ -244,22 +244,31 @@ public class Weapon : MonoBehaviour
             $"<color=lime>[Weapon Fire]</color> " +
             $"무기 ID: {id} | " +
             $"Weapon.damage: {damage:F1} | " +
-            $"count: {count}"
+            $"count: {count} | " +
+            $"prefabId: {prefabId}"
         );
 
         Transform bullet = GameManager.instance.pool.Get(prefabId).transform;
         bullet.position = transform.position;
         bullet.rotation = Quaternion.FromToRotation(Vector3.up, dir);
 
-        // -----------------------------------------------------
-        // 일반 발사체는 spinHitInterval = 0
-        // -----------------------------------------------------
+        // =====================================================
+        // Bullet 초기화
+        // =====================================================
 
         bullet.GetComponent<Bullet>().Init(damage, count, dir, id, 0f);
 
+        // =====================================================
+        // Bullet 생성 확인 로그
+        // =====================================================
+
         Debug.Log(
             $"<color=cyan>[Bullet 생성]</color> " +
-            $"전달 damage: {damage:F1}"
+            $"이름: {bullet.name} | " +
+            $"위치: {bullet.position} | " +
+            $"방향: {dir} | " +
+            $"velocity: {dir * 15f} | " +
+            $"damage: {damage:F1}"
         );
 
         AudioManager.instance.PlaySfx(AudioManager.Sfx.Range);

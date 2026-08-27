@@ -21,11 +21,11 @@ MonoBehaviour:
   baseDamage: 0
   baseCount: 0
   damages:
-  - 25
-  - 40
-  - 55
-  - 70
-  - 85
+  - 0.25
+  - 0.4
+  - 0.55
+  - 0.7
+  - 0.85
   counts: 
   projectile: {fileID: 0}
   hand: {fileID: 0}

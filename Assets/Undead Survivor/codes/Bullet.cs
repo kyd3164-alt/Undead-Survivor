@@ -5,6 +5,7 @@ public class Bullet : MonoBehaviour
     public int id;
     public float damage;
     public int per;
+    public float lifeTime = 3f;
 
     Rigidbody2D rigid;
 
@@ -61,7 +62,14 @@ public class Bullet : MonoBehaviour
         // 일반 발사체 이동
         if (per >= 0)
         {
+            // 일반 원거리 발사체는 빠르게 움직이므로
+            // 충돌을 놓치지 않도록 Continuous 사용
+            rigid.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
             rigid.linearVelocity = dir * 15f;
+
+            // ★ 추가: 3초(lifeTime) 후에 DisableBullet 함수를 강제로 실행해라!
+            Invoke("DisableBullet", lifeTime);
         }
         else
         {
@@ -78,6 +86,13 @@ public class Bullet : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D collision)
     {
+        Debug.Log(
+            $"<color=white>[Bullet 충돌 확인]</color> " +
+            $"Bullet: {gameObject.name} | " +
+            $"대상: {collision.name} | " +
+            $"Tag: {collision.tag}"
+        );
+
         // =========================================================
         // Boss
         // =========================================================
@@ -94,6 +109,12 @@ public class Bullet : MonoBehaviour
 
         if (collision.CompareTag("Enemy"))
         {
+            Debug.Log(
+                $"<color=red>[Bullet → Enemy]</color> " +
+                $"Enemy: {collision.name} | " +
+                $"damage: {damage:F1}"
+            );
+
             // 삽 / 낫
             // 무한 관통이므로 Enemy 충돌로 사라지지 않음
             if (per == -100)
@@ -107,6 +128,11 @@ public class Bullet : MonoBehaviour
 
             if (per < 0)
             {
+                Debug.Log(
+                    $"<color=orange>[Bullet 제거]</color> " +
+                    $"Enemy 피격 후 Bullet 비활성화"
+                );
+
                 DisableBullet();
             }
 
@@ -119,6 +145,15 @@ public class Bullet : MonoBehaviour
 
         if (collision.CompareTag("Area") && per != -100)
         {
+            // 엽총 같은 일반 원거리 무기(id가 0, 5가 아닌 것)는 무시하고 통과
+            if (id != 0 && id != 5)
+                return;
+
+            Debug.Log(
+                $"<color=magenta>[⚠ Bullet → Area]</color> " +
+                $"Bullet이 Area와 충돌해서 제거됨"
+            );
+
             DisableBullet();
         }
     }
@@ -226,7 +261,7 @@ public class Bullet : MonoBehaviour
 
         float hopeDamage =
             boss.GetMaxHealth() *
-            (Item.HopeOfHopeRate / 100f);
+            Item.HopeOfHopeRate;
 
         float totalDamage =
             damage +
@@ -267,16 +302,6 @@ public class Bullet : MonoBehaviour
                 DisableBullet();
             }
         }
-
-        // =====================================================
-        // 삽 / 낫
-        // =====================================================
-
-        else
-        {
-            // 삽 / 낫은 계속 회전하므로
-            // Bullet을 비활성화하지 않음
-        }
     }
 
     // =========================================================
@@ -285,10 +310,14 @@ public class Bullet : MonoBehaviour
 
     void DisableBullet()
     {
+        // ---------------------------------------------------------
+        // 3. 비활성화될 때 예약되어 있던 Invoke 취소하기 (오브젝트 풀 꼬임 방지)
+        // ---------------------------------------------------------
+        CancelInvoke("DisableBullet"); // ★ 추가: 이미 몬스터를 맞춰서 사라질 때, 예약된 Invoke를 취소함
+
         if (rigid != null)
         {
-            rigid.linearVelocity =
-                Vector2.zero;
+            rigid.linearVelocity = Vector2.zero;
         }
 
         gameObject.SetActive(false);
@@ -300,8 +329,11 @@ public class Bullet : MonoBehaviour
 
     void OnTriggerExit2D(Collider2D collision)
     {
-        if (!collision.CompareTag("Area") ||
-            per == -100)
+        if (!collision.CompareTag("Area") || per == -100)
+            return;
+
+        // 엽총 같은 일반 원거리 무기(id가 0, 5가 아닌 것)는 범위를 벗어나도 계속 날아가야 하므로 무시
+        if (id != 0 && id != 5)
             return;
 
         DisableBullet();

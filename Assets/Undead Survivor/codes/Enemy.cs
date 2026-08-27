@@ -80,6 +80,12 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D collision)
     {
+        Debug.Log(
+            $"<color=orange>[Enemy Trigger]</color> " +
+            $"충돌 대상: {collision.name} | " +
+            $"Tag: {collision.tag}"
+        );
+
         if (!collision.CompareTag("Bullet") || !isLive)
             return;
 
@@ -96,6 +102,12 @@ public class Enemy : MonoBehaviour
             float finalDamage = bullet.damage;
 
             health -= bullet.damage;
+
+            Debug.Log(
+                $"<color=red>[일반 적 피격]</color> " +
+                $"피해: {finalDamage:F1} | " +
+                $"남은 HP: {health:F1}"
+            );
 
             // ==========================================
             // 🩸 블러드 히트
