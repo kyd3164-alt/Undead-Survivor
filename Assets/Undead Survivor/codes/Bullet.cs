@@ -285,6 +285,24 @@ public class Bullet : MonoBehaviour
         );
 
         // =====================================================
+        // [추가된 보스 피흡 로직]
+        // =====================================================
+        if (Item.BloodHitRate > 0f)
+        {
+            // 총 피해량에 피흡 비율을 곱해 회복량을 정합니다.
+            float healAmount = totalDamage * Item.BloodHitRate;
+
+            // 플레이어 체력 컴포넌트를 찾아서 치료합니다.
+            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+
+            if (playerHealth != null)
+            {
+                playerHealth.Heal(healAmount);
+                Debug.Log($"<color=lime>[보스 피흡 성공]</color> 회복량: {healAmount:F1}");
+            }
+        }
+
+        // =====================================================
         // 일반 발사체
         // =====================================================
 

@@ -1,68 +1,64 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 public class CerberusBodyHitbox : MonoBehaviour
 {
     [Header("Damage Settings")]
-    [Tooltip("Ã¼Å© ÇØÁ¦ ½Ã ºÎ¸ğ(Boss)ÀÇ damage °ªÀ» ÀÚµ¿À¸·Î °¡Á®¿É´Ï´Ù.")]
+    [Tooltip("ì²´í¬ í•´ì œ ì‹œ ë¶€ëª¨(Boss)ì˜ damage ê°’ì„ ìë™ìœ¼ë¡œ ê°€ì ¸ì˜µë‹ˆë‹¤.")]
     public bool useManualDamage = false;
 
-    [Tooltip("¼öµ¿ ¼³Á¤ µ¥¹ÌÁö")]
+    [Tooltip("ìˆ˜ë™ ì„¤ì • ë°ë¯¸ì§€")]
     public float baseBodyDamage = 10f;
 
-    [Tooltip("º¸½º ¸öÃ¼ ¾È¿¡¼­ µôÀÌ µé¾î°¡´Â ÁÖ±â (ÃÊ ´ÜÀ§)")]
+    [Tooltip("ë³´ìŠ¤ ëª¸ì²´ ì•ˆì—ì„œ ë”œì´ ë“¤ì–´ê°€ëŠ” ì£¼ê¸° (ì´ˆ ë‹¨ìœ„)")]
     public float tickRate = 0.5f;
 
     private Boss bossScript;
-    // ÇÃ·¹ÀÌ¾î°¡ ¿©·¯ °³ÀÇ Äİ¶óÀÌ´õ(ÀÚ½Ä ¿ÀºêÁ§Æ® µî)¸¦ °¡Áú ¶§ Å¸ÀÌ¸Ó°¡ ²¿ÀÌ´Â Çö»óÀ» ¹æÁöÇÏ±â À§ÇÑ µñ¼Å³Ê¸®
+    // í”Œë ˆì´ì–´ê°€ ì—¬ëŸ¬ ê°œì˜ ì½œë¼ì´ë”(ìì‹ ì˜¤ë¸Œì íŠ¸ ë“±)ë¥¼ ê°€ì§ˆ ë•Œ íƒ€ì´ë¨¸ê°€ ê¼¬ì´ëŠ” í˜„ìƒì„ ë°©ì§€í•˜ê¸° ìœ„í•œ ë”•ì…”ë„ˆë¦¬
     private Dictionary<Collider2D, float> activeColliders = new Dictionary<Collider2D, float>();
 
     void Awake()
     {
-        // ºÎ¸ğ ¿ÀºêÁ§Æ®¿¡¼­ Boss ½ºÅ©¸³Æ®¸¦ Ã£¾Æ¿É´Ï´Ù.
+        // ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸ì—ì„œ Boss ìŠ¤í¬ë¦½íŠ¸ë¥¼ ì°¾ì•„ì˜µë‹ˆë‹¤.
         bossScript = GetComponentInParent<Boss>();
     }
 
-    // ºÎ¸ğ Boss ½ºÅ©¸³Æ®ÀÇ µ¥¹ÌÁö¸¦ ¾µÁö, ¼öµ¿ µ¥¹ÌÁö¸¦ ¾µÁö °áÁ¤ÇÏ´Â ÇÔ¼ö
+    // ë¶€ëª¨ Boss ìŠ¤í¬ë¦½íŠ¸ì˜ ë°ë¯¸ì§€ë¥¼ ì“¸ì§€, ìˆ˜ë™ ë°ë¯¸ì§€ë¥¼ ì“¸ì§€ ê²°ì •í•˜ëŠ” í•¨ìˆ˜
     float GetCurrentDamage()
     {
         if (!useManualDamage && bossScript != null)
         {
-            return bossScript.damage; // ºÎ¸ğ º¸½º ½ºÅ©¸³Æ®ÀÇ µ¥¹ÌÁö ¿¬µ¿!
+            return bossScript.damage; // ë¶€ëª¨ ë³´ìŠ¤ ìŠ¤í¬ë¦½íŠ¸ì˜ ë°ë¯¸ì§€ ì—°ë™!
         }
         return baseBodyDamage;
     }
 
-    // 1. Ã³À½ ¸ö¿¡ ´ê´Â ¼ø°£ Áï½Ã µô
+    // 1. ì²˜ìŒ ëª¸ì— ë‹¿ëŠ” ìˆœê°„ ì¦‰ì‹œ ë”œ
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log($"Ãæµ¹ °¨ÁöµÈ ¿ÀºêÁ§Æ®: {other.name} (ÅÂ±×: {other.tag})");
-
         if (other.CompareTag("Player"))
         {
-            // º¸½º°¡ µîÀå Áß(Appearance)ÀÏ ¶§´Â µ¥¹ÌÁö¸¦ ÁÖÁö ¾ÊÀ½
+            // CerberusBodyHitbox.cs ì˜ OnTriggerEnter2D ë‚´ë¶€
             if (bossScript != null && bossScript.currentState == Boss.BossState.Appearance) return;
 
-            PlayerHealth player = other.GetComponent<PlayerHealth>();
+            PlayerHealth player = other.GetComponentInParent<PlayerHealth>();
             if (player != null)
             {
                 player.TakeBossBodyDamage(GetCurrentDamage());
-
-                // ÀÌ Äİ¶óÀÌ´õ¿¡ ´ëÇÑ ´ÙÀ½ µô Å¸ÀÌ¸Ó ¼³Á¤ (Time.time ±âÁØ)
                 activeColliders[other] = Time.time + tickRate;
             }
         }
     }
 
-    // 2. ¸ö ¾È¿¡¼­ ºñºñ°í ÀÖÀ» ¶§ tickRate ÁÖ±â¸¶´Ù µô
+    // 2. ëª¸ ì•ˆì—ì„œ ë¹„ë¹„ê³  ìˆì„ ë•Œ tickRate ì£¼ê¸°ë§ˆë‹¤ ë”œ
     private void OnTriggerStay2D(Collider2D other)
     {
         if (other.CompareTag("Player") && activeColliders.ContainsKey(other))
         {
-            // º¸½º°¡ µîÀå Áß(Appearance)ÀÏ ¶§´Â µ¥¹ÌÁö¸¦ ÁÖÁö ¾ÊÀ½
+            // ë³´ìŠ¤ê°€ ë“±ì¥ ì¤‘(Appearance)ì¼ ë•ŒëŠ” ë°ë¯¸ì§€ë¥¼ ì£¼ì§€ ì•ŠìŒ
             if (bossScript != null && bossScript.currentState == Boss.BossState.Appearance) return;
 
-            // ÁöÁ¤µÈ ÁÖ±â°¡ Áö³µ´ÂÁö È®ÀÎ
+            // ì§€ì •ëœ ì£¼ê¸°ê°€ ì§€ë‚¬ëŠ”ì§€ í™•ì¸
             if (Time.time >= activeColliders[other])
             {
                 PlayerHealth player = other.GetComponent<PlayerHealth>();
@@ -71,13 +67,13 @@ public class CerberusBodyHitbox : MonoBehaviour
                     player.TakeBossBodyDamage(GetCurrentDamage());
                 }
 
-                // ´ÙÀ½ µô Å¸ÀÌ¸Ó °»½Å
+                // ë‹¤ìŒ ë”œ íƒ€ì´ë¨¸ ê°±ì‹ 
                 activeColliders[other] = Time.time + tickRate;
             }
         }
     }
 
-    // 3. ¿µ¿ªÀ» ³ª°¡¸é ÇØ´ç Äİ¶óÀÌ´õ Å¸ÀÌ¸Ó Á¤¸®
+    // 3. ì˜ì—­ì„ ë‚˜ê°€ë©´ í•´ë‹¹ ì½œë¼ì´ë” íƒ€ì´ë¨¸ ì •ë¦¬
     private void OnTriggerExit2D(Collider2D other)
     {
         if (other.CompareTag("Player"))

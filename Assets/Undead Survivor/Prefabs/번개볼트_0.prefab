@@ -172,4 +172,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HomingProjectile
   speed: 5
   rotateSpeed: 200
+  damage: 700
+  duration: 5
   explosionPrefab: {fileID: 4436831872981840492, guid: 90fbf4fa9793b9944aa4b8f799effe68, type: 3}

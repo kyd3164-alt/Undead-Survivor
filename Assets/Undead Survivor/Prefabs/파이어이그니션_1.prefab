@@ -171,4 +171,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StraightProjectile
   speed: 15
+  damage: 333
   explosionPrefab: {fileID: 5930273597255450548, guid: d0e19abb2e917fa49b9f47f7599ec4bb, type: 3}
+  duration: 2
